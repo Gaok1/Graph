@@ -18,22 +18,18 @@ typedef struct Edge {
      * @brief Identificador único da aresta.
      */
     int id;
-
     /**
      * @brief Identificador do vértice de origem.
      */
     int origin_key;
-
     /**
      * @brief Identificador do vértice de destino.
      */
     int dest_key;
-
     /**
      * @brief Ponteiro para a próxima aresta na lista de adjacência.
      */
     struct Edge *next;
-
     /**
      * @brief Ponteiro para o vértice de destino.
      */
@@ -56,27 +52,22 @@ typedef struct Vertice {
      * @brief Identificador único do vértice.
      */
     int key;
-
     /**
      * @brief Ponteiro para a lista de arestas que partem deste vértice.
      */
     Edge *edges;
-
     /**
      * @brief Array contendo os identificadores dos vértices sucessores.
      */
     int *sucessors;
-
     /**
      * @brief Array contendo os identificadores dos vértices predecessores.
      */
     int *predecessors;
-
     /**
      * @brief Grau de saída do vértice (número de arestas que saem deste vértice).
      */
     int exitDegree;
-
     /**
      * @brief Grau de entrada do vértice (número de arestas que chegam a este vértice).
      */
