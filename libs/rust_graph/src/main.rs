@@ -1,5 +1,6 @@
 mod graph_lib {
     pub mod graph;
+    pub mod busca;
 }
 use graph_lib::graph::DiGraph;
 
@@ -12,9 +13,6 @@ fn main() {
         graph.get_edges_lenght()
     );
 
-    let vertice_key = 1;
-    let sucessors = graph.get_sucessor(vertice_key);
-    let predecessor = graph.get_predecessor(vertice_key);
-    println!("sucessores do vertice {}: {:?}", vertice_key, sucessors);
-    println!("predecessores do vertice {}: {:?}", vertice_key, predecessor);
+    let dfs= graph.dfs_search(1);
+    
 }
