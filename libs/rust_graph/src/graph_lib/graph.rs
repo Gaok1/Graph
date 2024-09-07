@@ -240,7 +240,6 @@ impl DiGraph {
         }
         return dfs_data;
     }
-
     fn explore_dfs_vertice(
         &self,
         search_key: i32,
@@ -251,9 +250,9 @@ impl DiGraph {
         stack.push(search_key);
 
         while stack.len() > 0 {
-            let vertice_key = *stack.get(stack.len() - 1).unwrap();
+            let vertice_key = stack.pop().unwrap();
 
-            if dfs_data.tempo_descoberta.get(&vertice_key).is_none() {
+            if !dfs_data.already_visited(vertice_key) {
                 dfs_data.start_exploring(vertice_key);
             }
             let mut arestas: Option<Vec<Edge>> = self.get_edges(vertice_key);
@@ -271,41 +270,28 @@ impl DiGraph {
                     continue; //aresta ja classificada
                 }
                 dfs_data.arestas_marked.insert(aresta.id as i32, true); // marca a aresta que está sendo explorada
-                if dfs_data.tempo_descoberta.get(&aresta.destiny_key).is_none() {
+                if !dfs_data.already_visited(aresta.destiny_key) {
                     // não foi descoberto ainda, arvore
-
                     dfs_data.fathers.insert(aresta.destiny_key, vertice_key);
-                    stack.push(aresta.destiny_key);
-                    dfs_data
-                        .class_arestas
-                        .insert(aresta.clone(), DfsClassification::Arvore);
+                    stack.push(aresta.destiny_key); // empilha o vertice
+                    dfs_data.classificate_aresta(&aresta, DfsClassification::Arvore);
                     descobriu_vertice = true;
-
                     break;
                 }
-                if (dfs_data.tempo_termino.get(&aresta.destiny_key).is_none()) {
+                if !dfs_data.already_explored(aresta.destiny_key) {
                     //se ainda n finalizou, é retorno
-
-                    dfs_data
-                        .class_arestas
-                        .insert(aresta.clone(), DfsClassification::Retorno);
+                    dfs_data.classificate_aresta(&aresta, DfsClassification::Retorno);
                 } else if dfs_data.tempo_descoberta.get(&vertice_key).unwrap()
                     < dfs_data.tempo_descoberta.get(&aresta.destiny_key).unwrap()
                 {
                     //se já finalizou a busca, mas ele é mais novo q o vertice_key, é avanço
-
-                    dfs_data
-                        .class_arestas
-                        .insert(aresta.clone(), DfsClassification::Avanco);
+                    dfs_data.classificate_aresta(&aresta, DfsClassification::Avanco);
                 } else {
-                    //so pode ser cruzamento
-
-                    dfs_data
-                        .class_arestas
-                        .insert(aresta.clone(), DfsClassification::Cruzamento);
+                    //se já finalizou a busca, mas ele é mais velho q o vertice_key, é cruzamento
+                    dfs_data.classificate_aresta(&aresta, DfsClassification::Cruzamento);
                 }
             }
-            if (!descobriu_vertice) {
+            if !descobriu_vertice {
                 dfs_data.finish_exploring(vertice_key);
                 stack.pop();
             }
