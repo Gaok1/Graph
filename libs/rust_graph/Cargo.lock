@@ -51,6 +51,7 @@ name = "rust_graph"
 version = "0.1.0"
 dependencies = [
  "scan_fmt",
+ "text_io",
 ]
 
 [[package]]
@@ -61,3 +62,9 @@ checksum = "0b53b0a5db882a8e2fdaae0a43f7b39e7e9082389e978398bdf223a55b581248"
 dependencies = [
  "regex",
 ]
+
+[[package]]
+name = "text_io"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5f0c8eb2ad70c12a6a69508f499b3051c924f4b1cfeae85bfad96e6bc5bba46"

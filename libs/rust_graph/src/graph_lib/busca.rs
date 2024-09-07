@@ -9,6 +9,7 @@ pub enum DfsClassification {
     Avanco,
     Cruzamento,
 }
+#[allow(unused)]
 impl DfsClassification{
     pub fn is_arvore(&self) -> bool{
         match self{
@@ -71,7 +72,7 @@ impl DfsStruct{
         self.clock += 1;
     }
 
-    pub fn get_unexplored_vertice(&self, g:&DiGraph, vertice_key:i32)-> i32{
+    pub fn get_unexplored_vertice(&self, g:&DiGraph)-> i32{
         for key in g.get_vertice_key_array() {
             if self.tempo_descoberta.get(&key).is_none() {
                 return key;

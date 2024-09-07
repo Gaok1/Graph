@@ -3,10 +3,11 @@
 use super::busca::*;
 use scan_fmt::scan_fmt;
 use std::cell::RefCell;
+use std::fmt::Debug;
 use std::rc::Rc;
 use std::{collections::HashMap, fs};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct Edge {
     destiny_key: i32,
     origin_key: i32,
@@ -27,13 +28,37 @@ impl Edge {
             origin_key: origin_vertice,
         }
     }
-}
 
+    pub fn get_destiny_key(&self) -> i32 {
+        self.destiny_key
+    }
+    pub fn get_origin_key(&self) -> i32 {
+        self.origin_key
+    }
+    pub fn get_id(&self) -> usize {
+        self.id
+    }
+}
+impl PartialOrd for Edge {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+impl Ord for Edge {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.destiny_key.cmp(&other.destiny_key)
+    }
+}
+impl Debug for Edge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} -> {}", self.origin_key, self.destiny_key)
+    }
+}
 ///# Vertice
 /// Estrutura destinada a representar vertices em um grafo
 ///
 /// contém campos como `key` e `edges`
-struct Vertice {
+pub struct Vertice {
     key: i32,
     edges: Vec<Edge>,
 }
@@ -98,7 +123,7 @@ impl DiGraph {
         return vertice_array;
     }
 
-    pub fn get_Vertice_cloneRef(&self, vertice_key: i32) -> Option<Rc<RefCell<Vertice>>> {
+    pub fn get_vertice_cloneRef(&self, vertice_key: i32) -> Option<Rc<RefCell<Vertice>>> {
         let vertice = self.vertices.get(&vertice_key);
         if (vertice.is_none()) {
             return None;
@@ -139,19 +164,15 @@ impl DiGraph {
         vertice_origem.add_edge(destiny_vert); // precisa ser mutavel
     }
 
-    pub fn from_file(file_name: &str) -> DiGraph {
-        let content = fs::read_to_string(file_name).unwrap();
-        let mut first_line: bool = true;
+    pub fn from_file(file_path: &str) -> DiGraph {
+        let file_content = fs::read_to_string(file_path).unwrap();
 
-        let mut graph = DiGraph::new(0, 0);
+        let mut lines = file_content.lines(); //iterador do arquivo
 
-        for line in content.lines() {
-            if (first_line) {
-                let (vert_num, edge_num) = scan_fmt!(line, "{} {}", u32, u32).unwrap();
-                graph = DiGraph::new(vert_num, edge_num);
-                first_line = false;
-                continue;
-            }
+        let (vert_num, edge_num) = scan_fmt!(lines.next().unwrap(), "{} {}", u32, u32).unwrap();
+        let mut graph = DiGraph::new(vert_num, edge_num);
+
+        for line in lines {
             let (orig, dest) = scan_fmt!(line, "{} {}", i32, i32).unwrap();
             graph.add_edge(orig, dest);
         }
@@ -161,7 +182,7 @@ impl DiGraph {
     /// retorna as chaves dos sucessores do vértice
     ///
     pub fn get_sucessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
-        let vertice: Option<Rc<RefCell<Vertice>>> = self.get_Vertice_cloneRef(vertice_key);
+        let vertice: Option<Rc<RefCell<Vertice>>> = self.get_vertice_cloneRef(vertice_key);
         if vertice.is_none() {
             return None;
         }
@@ -180,7 +201,7 @@ impl DiGraph {
 
     /// retorna um conjunto clonado de arestas do vértice
     pub fn get_edges(&self, vertice_key: i32) -> Option<Vec<Edge>> {
-        let vertice: Option<Rc<RefCell<Vertice>>> = self.get_Vertice_cloneRef(vertice_key);
+        let vertice: Option<Rc<RefCell<Vertice>>> = self.get_vertice_cloneRef(vertice_key);
         if vertice.is_none() {
             return None;
         }
@@ -188,14 +209,13 @@ impl DiGraph {
         let vert_ref = vertice.unwrap();
 
         let vertice = vert_ref.borrow();
-        let arestas: Vec<Edge> = vertice.get_Edges_clone();
-        return Some(arestas);
+        Some(vertice.get_Edges_clone())
     }
 
     // retorna sa chaves dos predecessores do vértice
     ///
     pub fn get_predecessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
-        let mut vertice: Option<Rc<RefCell<Vertice>>> = self.get_Vertice_cloneRef(vertice_key);
+        let mut vertice: Option<Rc<RefCell<Vertice>>> = self.get_vertice_cloneRef(vertice_key);
         if vertice.is_none() {
             return None;
         }
@@ -216,12 +236,16 @@ impl DiGraph {
         let mut dfs_data = DfsStruct::new(self);
         while search_key != -1 {
             self.explore_dfs_vertice(search_key, &mut dfs_data);
-            search_key = dfs_data.get_unexplored_vertice(self, search_key);
+            search_key = dfs_data.get_unexplored_vertice(self);
         }
         return dfs_data;
     }
 
-    fn explore_dfs_vertice(&self, search_key: i32, dfs_data: &mut DfsStruct) {
+    fn explore_dfs_vertice(
+        &self,
+        search_key: i32,
+        dfs_data: &mut DfsStruct,
+    ) {
         let mut stack: Vec<i32> = Vec::new();
 
         stack.push(search_key);
@@ -232,15 +256,16 @@ impl DiGraph {
             if dfs_data.tempo_descoberta.get(&vertice_key).is_none() {
                 dfs_data.start_exploring(vertice_key);
             }
-            let arestas: Option<Vec<Edge>> = self.get_edges(vertice_key);
+            let mut arestas: Option<Vec<Edge>> = self.get_edges(vertice_key);
 
-            let Some(arestas) = arestas else {
+            let Some(mut arestas) = arestas else {
                 dfs_data.finish_exploring(vertice_key);
                 stack.pop();
                 continue;
             };
-
+            arestas.sort();
             let mut descobriu_vertice = false;
+
             for aresta in arestas {
                 if dfs_data.is_aresta_marked(aresta.id as i32) {
                     continue; //aresta ja classificada
@@ -250,10 +275,10 @@ impl DiGraph {
                     // não foi descoberto ainda, arvore
 
                     dfs_data.fathers.insert(aresta.destiny_key, vertice_key);
-                    stack.push( aresta.destiny_key);
+                    stack.push(aresta.destiny_key);
                     dfs_data
                         .class_arestas
-                        .insert(aresta, DfsClassification::Arvore);
+                        .insert(aresta.clone(), DfsClassification::Arvore);
                     descobriu_vertice = true;
 
                     break;
@@ -263,7 +288,7 @@ impl DiGraph {
 
                     dfs_data
                         .class_arestas
-                        .insert(aresta, DfsClassification::Retorno);
+                        .insert(aresta.clone(), DfsClassification::Retorno);
                 } else if dfs_data.tempo_descoberta.get(&vertice_key).unwrap()
                     < dfs_data.tempo_descoberta.get(&aresta.destiny_key).unwrap()
                 {
@@ -271,7 +296,7 @@ impl DiGraph {
 
                     dfs_data
                         .class_arestas
-                        .insert(aresta, DfsClassification::Avanco);
+                        .insert(aresta.clone(), DfsClassification::Avanco);
                 } else {
                     //so pode ser cruzamento
 

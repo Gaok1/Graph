@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 scan_fmt = "0.2.0"
+text_io = "0.1.12"
