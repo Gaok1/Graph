@@ -6,6 +6,7 @@ import java.util.Map;
 
 // Classe Grafo
 public class Grafo {
+    
     private Map<Integer, Vertice> vertices_map;
 
     public Grafo() {
@@ -36,6 +37,10 @@ public class Grafo {
         // Adiciona a aresta em ambos os vértices
         vertice1.adicionarAresta(aresta);
         vertice2.adicionarAresta(aresta);
+    }
+
+    public void removeAresta(Vertice v, Vertice w){
+
     }
 
     public Vertice getVertice(int chave) {

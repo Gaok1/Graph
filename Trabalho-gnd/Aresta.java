@@ -10,9 +10,11 @@ public class Aresta {
     public Vertice get_vertice_incidente(Vertice vertice) {
         if (vertice == v) {
             return w;
-        }else {
+        }else if(vertice == w) {
             return v;
-        } 
+        } else{
+            return null;
+        }
     }
 
 }

@@ -32,5 +32,12 @@ public class Vertice {
         String hashKey = key1 + " " + key2;
         return arestas.containsKey(hashKey);
     }
+
+    public void removerAresta(Vertice w){
+        int key1 = this.chave;
+        int key2 = w.getChave();
+        String hashKey = key1 + " " + key2;
+        arestas.remove(hashKey);
+    }
     
 }

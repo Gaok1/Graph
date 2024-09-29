@@ -1,6 +1,6 @@
 
 use super::graph::*;
-use std::collections::HashMap;
+use std::{borrow::BorrowMut, cell::{Ref, RefCell}, collections::HashMap, rc::Rc};
 //busca em profundidade
 #[derive(Clone,Debug)]
 pub enum DfsClassification {
@@ -9,6 +9,7 @@ pub enum DfsClassification {
     Avanco,
     Cruzamento,
 }
+
 #[allow(unused)]
 impl DfsClassification{
     pub fn is_arvore(&self) -> bool{
@@ -45,6 +46,7 @@ pub struct DfsStruct{
     pub fathers : HashMap<i32,i32>,
     pub class_arestas : HashMap<Edge,DfsClassification>,
     pub arestas_marked : HashMap<i32,bool>,
+    pub trees : Vec<Rc<RefCell<DiGraph>>>,
     clock: i32,
 }
 impl DfsStruct{
@@ -58,6 +60,7 @@ impl DfsStruct{
             fathers: HashMap::with_capacity(v_len),
             class_arestas: HashMap::with_capacity(e_len),
             arestas_marked: HashMap::with_capacity(e_len),
+            trees : vec![],
             clock: 0,
         }
     }
@@ -74,10 +77,10 @@ impl DfsStruct{
     }
     /// Retorna a chave de um vertice ainda não explorado
     /// `g` - grafo utilizado na busca
-    pub fn get_unexplored_vertice(&self, g:&DiGraph)-> i32{
-        for key in g.get_vertice_key_array() {
+    pub fn get_unexplored_vertice(&self, key_array: &Vec<i32>)-> i32{
+        for key in key_array {
             if self.tempo_descoberta.get(&key).is_none() {
-                return key;
+                return *key;
             }
         }
         -1
@@ -114,9 +117,40 @@ impl DfsStruct{
         self.class_arestas.insert(aresta.clone(), class);
     }
 
+    /// ### get all the roots from a deep first search
+    pub fn get_roots(&self)-> Vec<i32>{
+        let mut roots : Vec<i32> = vec![];
+        for (vertice,_) in self.tempo_descoberta.iter(){
+            if self.fathers.get(vertice).is_none(){
+                roots.push(*vertice);
+            }
+        }
+        roots
+    }
+
+    pub fn add_tree_edge(&mut self, origin_vert : i32, destiny_vert:i32){
+        let trees: &mut Vec<Rc<RefCell<DiGraph>>> = self.trees.borrow_mut();
+        if self.fathers.get(&origin_vert).is_none() {
+            let mut new_root = DiGraph::new();
+            new_root.add_edge(origin_vert, destiny_vert);
+            trees.push(Rc::new(RefCell::new(new_root)));
+            return;
+        }
+        for tree in trees.iter_mut() {
+            let mut tree_mut = tree.try_borrow_mut().unwrap();
+            if tree_mut.vertice_exists(origin_vert){
+                tree_mut.add_edge(origin_vert, destiny_vert);
+            }
+        }
+    }
+
+    
+
 }
 
-
+pub trait DeepFirstSearch {
+    fn DeepFirstSearch(&self, start_vertice : i32, data:&mut DfsStruct);
+}
 
 
 
