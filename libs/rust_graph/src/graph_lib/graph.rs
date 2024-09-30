@@ -2,7 +2,8 @@
 
 use super::{busca::*, Kosaraju::{self, *}};
 use scan_fmt::scan_fmt;
-use std::{cell::RefCell, f32::consts::E};
+use rand::Rng;
+use std::{cell::RefCell, collections::HashSet, f32::consts::E, hash::Hash};
 use std::fmt::Debug;
 use std::io::ErrorKind;
 use std::process::exit;
@@ -179,7 +180,9 @@ impl DiGraph {
         return self.edges_num;
     }
     
-    
+    /// ## Retorna um vetor com as chaves dos vértices
+    /// 
+    /// `Vec<i32>` contendo as chaves dos vértices    
     pub fn get_vertice_key_array(&self) -> Vec<i32> {
         let mut vertice_array: Vec<i32> = Vec::with_capacity(self.vertices.len());
         for (vert_key, _) in self.vertices.iter() {
@@ -202,7 +205,7 @@ impl DiGraph {
     ///
     /// `false` se não existe
     pub fn vertice_exists(&self, vert_key: i32) -> bool {
-        !self.vertices.get(&vert_key).is_none()
+        self.vertices.get(&vert_key).is_some()
     }
 
     pub fn add_vertice(&mut self, vertice_key: i32) {
@@ -320,6 +323,10 @@ impl DiGraph {
 
 }
 
+
+
+
+
 /// implementação de busca em profundidade
 impl DeepFirstSearch for DiGraph {
     fn DeepFirstSearch(&self, search_key: i32, dfs_data: &mut DfsStruct) {
@@ -398,6 +405,40 @@ impl DiGraph {
             search_key = dfs_data.get_unexplored_vertice(&vertices_queue);
         }
         ConexComponents::from_dfsData(&mut dfs_data)
-          
     }    
 } 
+
+//gerador aleatorio de grafo
+impl DiGraph {
+    pub fn from_random(vertices_len: u32, edges_len: Option<u32>) -> DiGraph {
+        let min_edges = vertices_len - 1;
+        let edges_len = edges_len.unwrap_or(0).max(min_edges); // Compares and returns the maximum of two values.
+        let mut edges_added = HashSet::<(i32, i32)>::new();
+
+        let mut graph = DiGraph::new_sized(vertices_len);
+        graph.add_vertice(0);
+
+        let mut rng = rand::thread_rng();
+
+        for i in 1..=min_edges {
+            let i = i as i32;
+            let dest_key: i32 = rng.gen_range(0..i);
+            graph.add_edge(i, dest_key);
+            edges_added.insert((i, dest_key));
+        }
+
+        let mut count = min_edges;
+        while count < edges_len {
+            let origin = rng.gen_range(0..vertices_len) as i32;
+            let destiny = rng.gen_range(0..vertices_len) as i32;
+            if origin == destiny || edges_added.contains(&(origin, destiny)) {
+                continue;
+            }
+            graph.add_edge(origin, destiny);
+            edges_added.insert((origin, destiny));
+            count += 1;
+        }
+       // println!("Grafo gerado com {} vertices e {} arestas", vertices_len, edges_len);
+        graph
+    }
+}

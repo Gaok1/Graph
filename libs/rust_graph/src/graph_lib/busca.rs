@@ -46,7 +46,7 @@ pub struct DfsStruct{
     pub fathers : HashMap<i32,i32>,
     pub class_arestas : HashMap<Edge,DfsClassification>,
     pub arestas_marked : HashMap<i32,bool>,
-    pub trees : Vec<Rc<RefCell<DiGraph>>>,
+    pub trees : Vec<Rc<RefCell<DiGraph>>>, 
     clock: i32,
 }
 impl DfsStruct{
