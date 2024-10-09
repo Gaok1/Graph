@@ -1,0 +1,7 @@
+digraph G {
+layout=fdp;
+node [shape=circle];
+edge [dir=forward];
+51 -> 40;
+40 -> 22;
+}

@@ -1,5 +1,5 @@
 
-use super::graph::*;
+use super::{edge::Edge, graph::*};
 use std::{borrow::BorrowMut, cell::{Ref, RefCell}, collections::HashMap, rc::Rc};
 //busca em profundidade
 #[derive(Clone,Debug)]
@@ -49,11 +49,12 @@ pub struct DfsStruct{
     pub trees : Vec<Rc<RefCell<DiGraph>>>, 
     clock: i32,
 }
+#[allow(unused)]
 impl DfsStruct{
     
     pub fn new(g:&DiGraph) -> DfsStruct{
         let v_len = g.get_vertices_length() as usize;
-        let e_len = g.get_edges_lenght() as usize;
+        let e_len = g.get_edges_length() as usize;
         DfsStruct{
             tempo_descoberta: HashMap::with_capacity(v_len),
             tempo_termino: HashMap::with_capacity(v_len),
@@ -151,6 +152,5 @@ impl DfsStruct{
 pub trait DeepFirstSearch {
     fn DeepFirstSearch(&self, start_vertice : i32, data:&mut DfsStruct);
 }
-
 
 

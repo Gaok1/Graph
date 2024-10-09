@@ -1,0 +1,17 @@
+digraph G {
+layout=dot;
+node [shape=circle];
+edge [dir=forward];
+4 -> 0 [label="-1"];
+4 -> 3 [label="1583"];
+4 -> 2 [label="-1027"];
+0 -> 2 [label="-1552"];
+0 -> 5 [label="-83"];
+5 -> 0 [label="21"];
+5 -> 2 [label="283"];
+2 -> 1 [label="5"];
+2 -> 3 [label="853"];
+1 -> 0 [label="8"];
+3 -> 0 [label="-28"];
+3 -> 4 [label="-1262"];
+}

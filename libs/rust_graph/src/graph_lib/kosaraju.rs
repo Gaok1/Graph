@@ -12,7 +12,7 @@ pub struct ConexComponents {
     len: usize,
     components : Vec<Rc<RefCell<DiGraph>>>,
 }
-
+#[allow(unused)]
 impl ConexComponents{
     pub fn new() -> ConexComponents{
         ConexComponents{
@@ -41,3 +41,7 @@ impl ConexComponents{
     
 }
 
+
+pub trait Kosaraju {
+    fn conex_components(&self) -> ConexComponents;
+}
