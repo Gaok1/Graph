@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
-use crate::DiGraph;
+use crate::{tools::inifinity::Infinity, DiGraph};
 
 
-use super::super::tools::heap::HeapMin;
 
-use super::vertice::Vertice;
-use super::super::tools::inifinity::Infinity;
+
 
 pub struct Bellman {
     pred: HashMap<i32, i32>,
@@ -53,6 +51,7 @@ pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
                 let v = v.key();
                 let v_d = *data.pot.get(&v).unwrap();
                 let w_d = *data.pot.get(&w).unwrap();
+                
                 if w_d > (v_d + Number(e.weight())) {
                     data.pot.insert(w, Number(v_d.unwrap() + e.weight()));
                     data.pred.insert(w, v);

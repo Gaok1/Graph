@@ -1,0 +1,21 @@
+digraph G {
+layout=dot;
+node [shape=circle];
+edge [dir=forward];
+splines=false;
+7 [style=filled, fillcolor="white"];
+8 [style=filled, fillcolor="white"];
+3 [style=filled, fillcolor="white"];
+2 [style=filled, fillcolor="white"];
+1 [style=filled, fillcolor="white"];
+5 [style=filled, fillcolor="white"];
+6 [style=filled, fillcolor="white"];
+0 [style=filled, fillcolor="white"];
+4 [style=filled, fillcolor="white"];
+2 -> 0 [color="red", label="18"];
+3 -> 1 [color="red", label="6"];
+3 -> 4 [color="red", label="114"];
+3 -> 6 [color="red", label="175"];
+1 -> 5 [color="red", label="194"];
+2 -> 3 [color="red", label="8"];
+}

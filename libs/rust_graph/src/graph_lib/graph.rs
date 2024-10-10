@@ -387,7 +387,9 @@ impl Kosaraju for DiGraph {
 impl DiGraph {
     const MAX_EDGES_MULTIPLIER: u32 = 20;
 
-    pub fn from_random(vertices_len: u32, edges_len: Option<u32>, weighted : bool) -> DiGraph {
+    const MAX_EDGE_WEIGHT: i32 = 200;
+
+    pub fn from_random(vertices_len: u32, edges_len: Option<u32>, weighted : bool, negative_weight:bool) -> DiGraph {
         let min_edges = if vertices_len > 0 { vertices_len - 1 } else { 0 };
         let mut rng = rand::thread_rng();
         let random_edges_len = rng.gen_range(0..vertices_len * Self::MAX_EDGES_MULTIPLIER);
@@ -403,7 +405,14 @@ impl DiGraph {
             let i_key = i as i32;
             let dest_key: i32 = rng.gen_range(0..i_key);
             if weighted {
-                graph.add_edge_weighted(i_key, dest_key, random::<i32>() % 30);
+                if negative_weight{
+                    graph.add_edge_weighted(i_key, dest_key, random::<i32>() % Self::MAX_EDGE_WEIGHT);
+                }else{
+                    let mut weight = random::<i32>() % Self::MAX_EDGE_WEIGHT;
+                    if weight < 0 {weight = weight * -1;}
+                    graph.add_edge_weighted(i_key, dest_key, weight);
+                }
+                
             }
             else {
                 graph.add_edge(i_key, dest_key);
@@ -419,7 +428,13 @@ impl DiGraph {
                 continue;
             }
             if weighted {
-                graph.add_edge_weighted(origin, destiny, random::<i32>() % 2000);
+                if negative_weight{
+                    graph.add_edge_weighted(origin, destiny, random::<i32>() % Self::MAX_EDGE_WEIGHT);
+                }else{
+                    let mut weight = random::<i32>() % Self::MAX_EDGE_WEIGHT;
+                    if weight < 0 {weight = weight * -1;}
+                    graph.add_edge_weighted(origin, destiny, weight);
+                }
             }
             else {
                 graph.add_edge(origin, destiny);

@@ -1,29 +1,41 @@
-pub struct HeapMin<T> 
-where T: Ord + Clone {
+use std::cmp::Ordering;
+
+pub struct HeapMin<T, F> 
+where T:  Clone,
+      F: Fn(&T, &T) -> Ordering,
+{
     heap: Vec<T>,
+    cmp: F,
 }
 
 #[allow(unused)]
-impl<T> HeapMin<T>
-where T: Ord + Clone 
+impl<T, F> HeapMin<T, F>
+where T:  Clone,
+      F: Fn(&T, &T) -> Ordering,
 {
     /// Creates a new empty heap
-    pub fn new() -> Self {
+    pub fn new(cmp: F) -> Self {
         HeapMin {
             heap: Vec::new(),
+            cmp,
         }
     }
 
     /// Creates a new heap with a given capacity
-    pub fn with_capacity(size: usize) -> Self {
+    pub fn with_capacity(size: usize, cmp: F) -> Self {
         HeapMin {
             heap: Vec::with_capacity(size),
+            cmp,
         }
     }
 
     /// Returns the number of elements in the heap
     pub fn len(&self) -> usize {
         self.heap.len()
+    }
+
+    pub fn empty(&self) -> bool {
+        self.heap.len() == 0
     }
 
     /// Get the parent index and its value
@@ -53,7 +65,7 @@ where T: Ord + Clone
             return;
         }
         let (parent_idx, parent_value) = self.get_parent(idx).unwrap();
-        if self.heap[idx] < *parent_value {
+        if (self.cmp)(&self.heap[idx], parent_value) == Ordering::Less {
             self.heap.swap(idx, parent_idx);
             self.sift_up(parent_idx);
         }
@@ -66,13 +78,13 @@ where T: Ord + Clone
         let mut smallest_idx = idx;
 
         if let Some((left_idx, left_value)) = left_child {
-            if *left_value < self.heap[smallest_idx] {
+            if (self.cmp)(left_value, &self.heap[smallest_idx]) == Ordering::Less {
                 smallest_idx = left_idx;
             }
         }
 
         if let Some((right_idx, right_value)) = right_child {
-            if *right_value < self.heap[smallest_idx] {
+            if (self.cmp)(right_value, &self.heap[smallest_idx]) == Ordering::Less {
                 smallest_idx = right_idx;
             }
         }

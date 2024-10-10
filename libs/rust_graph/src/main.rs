@@ -1,22 +1,31 @@
-use std::{fs::File, io::Write, process::Command};
+use core::borrow;
+use std::{fs::File, i32, io::Write, process::Command};
 
 use graph::*;
 use graph_lib::*;
+use kosaraju::Kosaraju;
+use minPath::{bellman, dijkstra::{self, Dijkstra}};
+use tools::{heap::HeapMin, inifinity::Infinity};
+use view::{Color, GraphPainter};
+
+
 
 mod graph_lib;
 mod tools;
 
-use crate::graph_lib::bellman;
 
+use Infinity::{Infinite, Number};
 fn main() {
-    let graph = DiGraph::from_random(6,Some(12), true);
-    graph.to_dot_png("graph");
-    let  data = bellman::find_shortest_path(&graph, 0);
+    let graph = DiGraph::from_random(200, Some(300), true, false);
 
-    for i in data.pred().iter() {
-        println!("{} -> {} w {}", i.1, i.0, data.pot().get(i.0).unwrap());
+    let mut draw = GraphPainter::from_digraph(&graph);
+    draw.to_dot_png("graph");
+    let data = Dijkstra::shortest_path(&graph, 10);
+    
+    for (w, v) in data.pred() {
+        draw.update_edge_color(*v, *w, Color::Red);
     }
-
+    draw.remove_edges_by_color(Color::Black);
+    draw.to_dot_png("djikstra");    
     
-    
-}
+}   

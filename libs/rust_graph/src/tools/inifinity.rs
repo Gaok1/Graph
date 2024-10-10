@@ -3,8 +3,8 @@ use std::ops::Add;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Infinity {
-    Infinite,
-    Number (i32),
+    Infinite, //pode ser infinito
+    Number (i32), // ou um número
 }
 
 #[allow(unused)]
