@@ -1,8 +1,16 @@
 use std::collections::HashMap;
 use std::fs;
+use std::process::Command;
 use std::slice::Iter;
 use crate::DiGraph;
 #[derive(Debug, PartialEq, Eq, Hash, Clone,Copy)]
+
+
+
+
+
+
+
 pub enum Color {
     Rgb(u8, u8, u8),
     Red,
@@ -221,6 +229,9 @@ impl GraphPainter {
                 String::from_utf8_lossy(&output.stderr)
             );
         }
+        
+        // Deleta o arquivo DOT após gerar a imagem PNG
+        fs::remove_file(&dot_file).expect("Erro ao deletar arquivo DOT");
     }
 
     pub fn from_digraph(g: &DiGraph) -> Self {

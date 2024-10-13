@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    graph,
-    tools::{heap::HeapMin, inifinity::Infinity},
-    DiGraph,
+    graph, tools::{heap::HeapMin, inifinity::Infinity}, vertice, DiGraph
 };
 
 #[derive(Clone, Copy)]
@@ -66,8 +64,13 @@ impl Dijkstra {
 
 
         while !queue.empty() {
-            let vertice = queue.pop().unwrap().0;
-            let vertice = g.get_vertice_arc(vertice).unwrap();
+            let v = queue.pop().unwrap().0;
+            let vertice = g.get_vertice_arc(v);
+            if vertice.is_none(){
+                panic!("Vertice does not exist in graph {v}");
+            }
+            let vertice = vertice.unwrap();
+
             let v = vertice.read().unwrap();
             for e in v.edges_borrow() {
                 let w = e.destiny_key();

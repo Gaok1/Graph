@@ -3,7 +3,7 @@ use super::{edge::Edge, graph::*};
 use std::{borrow::BorrowMut, cell::{Ref, RefCell}, collections::HashMap, rc::Rc};
 //busca em profundidade
 #[derive(Clone,Debug)]
-pub enum DfsClassification {
+pub enum EdgeClassification {
     Arvore,
     Retorno,
     Avanco,
@@ -11,28 +11,28 @@ pub enum DfsClassification {
 }
 
 #[allow(unused)]
-impl DfsClassification{
+impl EdgeClassification{
     pub fn is_arvore(&self) -> bool{
         match self{
-            DfsClassification::Arvore => true,
+            EdgeClassification::Arvore => true,
             _ => false,
         }
     }
     pub fn is_retorno(&self) -> bool{
         match self{
-            DfsClassification::Retorno => true,
+            EdgeClassification::Retorno => true,
             _ => false,
         }
     }
     pub fn is_avanco(&self) -> bool{
         match self{
-            DfsClassification::Avanco => true,
+            EdgeClassification::Avanco => true,
             _ => false,
         }
     }
     pub fn is_cruzamento(&self) -> bool{
         match self{
-            DfsClassification::Cruzamento => true,
+            EdgeClassification::Cruzamento => true,
             _ => false,
         }
     }
@@ -44,7 +44,7 @@ pub struct DfsStruct{
     pub tempo_descoberta : HashMap<i32,i32>,
     pub tempo_termino : HashMap<i32,i32>,
     pub fathers : HashMap<i32,i32>,
-    pub class_arestas : HashMap<Edge,DfsClassification>,
+    pub class_arestas : HashMap<Edge,EdgeClassification>,
     pub arestas_marked : HashMap<i32,bool>,
     pub trees : Vec<Rc<RefCell<DiGraph>>>, 
     clock: i32,
@@ -114,7 +114,7 @@ impl DfsStruct{
         self.tempo_termino.get(&vertice_key).is_some()
     }
 
-    pub fn classificate_aresta(&mut self, aresta:&Edge, class:DfsClassification){
+    pub fn classificate_aresta(&mut self, aresta:&Edge, class:EdgeClassification){
         self.class_arestas.insert(aresta.clone(), class);
     }
 

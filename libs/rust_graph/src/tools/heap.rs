@@ -115,7 +115,7 @@ where T:  Clone,
         min_element
     }
 
-    /// Peek at the root element (the smallest element) without removing it
+    /// ## Peek at the root element (the smallest element) without removing it
     pub fn peek(&self) -> Option<&T> {
         self.heap.get(0)
     }

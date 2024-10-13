@@ -1,4 +1,4 @@
-use super::{busca::*, edge::Edge, kosaraju::{ConexComponents, Kosaraju}, vertice::Vertice};
+use super::{busca::*, edge::{self, Edge}, kosaraju::{ConexComponents, Kosaraju}, vertice::{self, Vertice}};
 use scan_fmt::scan_fmt;
 use rand::{ random, Rng};
 use std::{
@@ -21,10 +21,10 @@ use std::{
 /// `vertices`: HashMap para encontrar vértices usando sua key em O(1)
 pub struct DiGraph {
     vertices_num: u32,
-    edges_num: u32,
+    edges_num: usize,
     vertices: HashMap<i32, Arc<RwLock<Vertice>>>,
-    
 }
+
 #[allow(unused)]
 impl DiGraph {
     pub fn new() -> DiGraph {
@@ -97,7 +97,7 @@ impl DiGraph {
         self.vertices_num
     }
 
-    pub fn get_edges_length(&self) -> u32 {
+    pub fn get_edges_length(&self) -> usize {
         self.edges_num
     }
 
@@ -108,8 +108,23 @@ impl DiGraph {
         self.vertices.keys().cloned().collect()
     }
 
+    /// ## Returns the reference counter of the Vertice, if exists
     pub fn get_vertice_arc(&self, vertice_key: i32) -> Option<Arc<RwLock<Vertice>>> {
         self.vertices.get(&vertice_key).cloned()
+    }
+
+    pub fn all_edges(&self)-> Vec<Edge>{
+        let len: usize = self.get_edges_length();
+        let mut edges = Vec::with_capacity(len as usize);
+        for v in self.vertices.values(){
+            let v = v.read().unwrap();
+            let v_edges = v.edges_ref();
+            for e in v_edges{
+                edges.push(e.clone());
+            }
+        }
+        edges
+        
     }
 
     /// ## Verifica existência de um vértice no grafo
@@ -328,14 +343,14 @@ impl DeepFirstSearch for DiGraph {
                     // Não foi descoberto ainda, árvore
                     dfs_data.fathers.insert(aresta.destiny_key(), vertice_key);
                     stack.push(aresta.destiny_key()); // Empilha o vértice
-                    dfs_data.classificate_aresta(&aresta, DfsClassification::Arvore);
+                    dfs_data.classificate_aresta(&aresta, EdgeClassification::Arvore);
                     descobriu_vertice = true;
                     dfs_data.add_tree_edge(aresta.origin_key(), aresta.destiny_key());
                     break;
                 }
                 if !dfs_data.already_explored(aresta.destiny_key()) {
                     // Se ainda não finalizou, é retorno
-                    dfs_data.classificate_aresta(&aresta, DfsClassification::Retorno);
+                    dfs_data.classificate_aresta(&aresta, EdgeClassification::Retorno);
                 } else if dfs_data
                     .tempo_descoberta
                     .get(&vertice_key)
@@ -346,10 +361,10 @@ impl DeepFirstSearch for DiGraph {
                         .unwrap()
                 {
                     // Se já finalizou a busca, mas ele é mais novo que o vertice_key, é avanço
-                    dfs_data.classificate_aresta(&aresta, DfsClassification::Avanco);
+                    dfs_data.classificate_aresta(&aresta, EdgeClassification::Avanco);
                 } else {
                     // Se já finalizou a busca, mas ele é mais velho que o vertice_key, é cruzamento
-                    dfs_data.classificate_aresta(&aresta, DfsClassification::Cruzamento);
+                    dfs_data.classificate_aresta(&aresta, EdgeClassification::Cruzamento);
                 }
             }
 
@@ -393,9 +408,12 @@ impl DiGraph {
         let min_edges = if vertices_len > 0 { vertices_len - 1 } else { 0 };
         let mut rng = rand::thread_rng();
         let random_edges_len = rng.gen_range(0..vertices_len * Self::MAX_EDGES_MULTIPLIER);
-        let edges_len = edges_len.unwrap_or(random_edges_len).max(min_edges); // Compara e retorna o máximo de dois valores
+        let mut edges_len = edges_len.unwrap_or(random_edges_len).max(min_edges); // Compara e retorna o máximo de dois valores
         let mut edges_added = HashSet::<(i32, i32)>::new();
-
+        
+        let max_edges = (vertices_len * (vertices_len-1));
+        edges_len = u32::min(edges_len, max_edges);
+        
         let mut graph = DiGraph::new_sized(vertices_len);
         if vertices_len > 0 {
             graph.add_vertice(0);
