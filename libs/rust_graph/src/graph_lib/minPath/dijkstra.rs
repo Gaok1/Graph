@@ -49,7 +49,7 @@ impl Dijkstra {
     }
 
     pub fn shortest_path(g: &DiGraph, v_key: i32) -> Self {
-        let mut data = Dijkstra::new_sized(g.get_vertices_length() as usize);
+        let mut data = Dijkstra::new_sized(g.vertices_length() as usize);
         let mut queue = HeapMin::new(|a: &VerticeDist, b: &VerticeDist| a.dist().cmp(&b.dist()));
         data.dist.insert(v_key, Infinity::new(0));
         queue.insert((VerticeDist(v_key, Infinity::new(0))));

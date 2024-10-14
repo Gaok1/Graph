@@ -10,6 +10,7 @@ pub struct Bellman {
     pred: HashMap<i32, i32>,
     pot: HashMap<i32, Infinity>,
 }
+
 #[allow(unused)]
 impl Bellman {
     pub fn new() -> Bellman {
@@ -42,7 +43,7 @@ pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
     }
  
     data.pot.insert(start, Number(0));
-    for _ in 0..graph.get_vertices_length() {
+    for _ in 0..graph.vertices_length() {
         let mut change = false;
         for v in graph.iter_vertices() {
             let v = v.read().unwrap();

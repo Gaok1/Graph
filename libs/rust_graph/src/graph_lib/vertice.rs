@@ -21,7 +21,9 @@ impl Vertice {
     pub fn key(&self) -> i32 {
         self.key
     }
-
+    pub fn get_edge_to(&self, key: i32) -> Option<&Edge> {
+        self.edges.iter().find(|e| e.destiny_key() == key)
+    }
 
     pub fn edges_borrow(&self) -> &Vec<Edge> {
         &self.edges

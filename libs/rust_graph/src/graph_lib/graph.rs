@@ -1,27 +1,31 @@
-use super::{busca::*, edge::{self, Edge}, kosaraju::{ConexComponents, Kosaraju}, vertice::{self, Vertice}};
+use super::{
+    busca::*,
+    edge::Edge,
+    kosaraju::{ConexComponents, Kosaraju},
+    vertice::Vertice,
+};
+use rand::{random, Rng};
 use scan_fmt::scan_fmt;
-use rand::{ random, Rng};
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     fs,
     io::ErrorKind,
-    sync::{Arc, RwLock},
+    sync::{atomic::AtomicI32, Arc, RwLock},
 };
-
 
 #[derive(Debug)]
 /// # DiGraph
 /// Grafo direcionado representado em lista de Adjacência
 ///
-/// `vertices_num`: quantidade de vértices em um grafo
+/// `vertices_len`: quantidade de vértices em um grafo
 ///
-/// `edges_num`: quantidade de arestas em um grafo
+/// `edges_len`: quantidade de arestas em um grafo
 ///
 /// `vertices`: HashMap para encontrar vértices usando sua key em O(1)
 pub struct DiGraph {
-    vertices_num: u32,
-    edges_num: usize,
+    vertices_len: u32,
+    edges_len: usize,
     vertices: HashMap<i32, Arc<RwLock<Vertice>>>,
 }
 
@@ -29,16 +33,16 @@ pub struct DiGraph {
 impl DiGraph {
     pub fn new() -> DiGraph {
         DiGraph {
-            vertices_num: 0,
-            edges_num: 0,
+            vertices_len: 0,
+            edges_len: 0,
             vertices: HashMap::new(),
         }
     }
 
     pub fn new_sized(vertice_num: u32) -> DiGraph {
         DiGraph {
-            vertices_num: 0,
-            edges_num: 0,
+            vertices_len: 0,
+            edges_len: 0,
             vertices: HashMap::with_capacity(vertice_num as usize),
         }
     }
@@ -87,18 +91,20 @@ impl DiGraph {
 
     pub fn from_edges(edge_array: Vec<Edge>) -> DiGraph {
         let mut graph = DiGraph::new();
+
         edge_array.iter().for_each(|edge| {
-            graph.add_edge(edge.origin_key(), edge.destiny_key());
+            graph.add_edge_weighted(edge.origin_key(), edge.destiny_key(), edge.weight());
         });
+
         graph
     }
 
-    pub fn get_vertices_length(&self) -> u32 {
-        self.vertices_num
+    pub fn vertices_length(&self) -> u32 {
+        self.vertices_len
     }
 
-    pub fn get_edges_length(&self) -> usize {
-        self.edges_num
+    pub fn edges_length(&self) -> usize {
+        self.edges_len
     }
 
     /// ## Retorna um vetor com as chaves dos vértices
@@ -113,18 +119,17 @@ impl DiGraph {
         self.vertices.get(&vertice_key).cloned()
     }
 
-    pub fn all_edges(&self)-> Vec<Edge>{
-        let len: usize = self.get_edges_length();
+    pub fn all_edges(&self) -> Vec<Edge> {
+        let len: usize = self.edges_length();
         let mut edges = Vec::with_capacity(len as usize);
-        for v in self.vertices.values(){
+        for v in self.vertices.values() {
             let v = v.read().unwrap();
             let v_edges = v.edges_ref();
-            for e in v_edges{
+            for e in v_edges {
                 edges.push(e.clone());
             }
         }
         edges
-        
     }
 
     /// ## Verifica existência de um vértice no grafo
@@ -140,7 +145,7 @@ impl DiGraph {
         let vertice = Vertice::new(vertice_key);
         let vertice = Arc::new(RwLock::new(vertice));
         self.vertices.insert(vertice_key, vertice);
-        self.vertices_num += 1;
+        self.vertices_len += 1;
     }
 
     pub fn add_edge(&mut self, origin_vert: i32, destiny_vert: i32) {
@@ -156,11 +161,11 @@ impl DiGraph {
             let mut vertice_origem = vertice_origem.write().unwrap();
             let edge = Edge::new(vertice_origem.key(), destiny_vert);
             vertice_origem.add_edge(edge);
-            self.edges_num += 1;
+            self.edges_len += 1;
         }
     }
 
-    pub fn add_edge_weighted(&mut self, origin_vert: i32, destiny_vert: i32, weight:i32) {
+    pub fn add_edge_weighted(&mut self, origin_vert: i32, destiny_vert: i32, weight: i32) {
         if !self.vertice_exists(origin_vert) {
             self.add_vertice(origin_vert);
         }
@@ -173,7 +178,7 @@ impl DiGraph {
             let mut vertice_origem = vertice_origem.write().unwrap();
             let edge = Edge::new_weighted(vertice_origem.key(), destiny_vert, weight);
             vertice_origem.add_edge(edge);
-            self.edges_num += 1;
+            self.edges_len += 1;
         }
     }
 
@@ -181,7 +186,13 @@ impl DiGraph {
     pub fn get_sucessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
         let vertice = self.get_vertice_arc(vertice_key)?;
         let vertice = vertice.read().unwrap();
-        Some(vertice.edges_clone().iter().map(|e| e.destiny_key()).collect())
+        Some(
+            vertice
+                .edges_clone()
+                .iter()
+                .map(|e| e.destiny_key())
+                .collect(),
+        )
     }
 
     /// ### Retorna um vetor clonado de arestas do vértice
@@ -215,9 +226,11 @@ impl DiGraph {
         dfs_data
     }
 
-    /// ## Cria um novo grafo com todas as arestas transpostas
+    /// Cria um novo grafo com todas as arestas transpostas
+    ///
+    ///  na prática apenas inverte as arestas direcionadas
     pub fn transpose(&self) -> DiGraph {
-        let mut t_graph = DiGraph::new_sized(self.vertices_num);
+        let mut t_graph = DiGraph::new_sized(self.vertices_len);
         let vertices = self.get_vertice_key_array();
         for vertice in vertices {
             if let Some(edges) = self.get_edges(vertice) {
@@ -228,14 +241,17 @@ impl DiGraph {
         }
         t_graph
     }
-
-    pub fn find_from(&self, from_key: i32, destiny_key: i32) -> bool {
+    /// check if a vertice reach another in the graph
+    ///
+    /// `from_key` -> origin vertice's key
+    ///
+    /// `destiny_key` -> target vertice's key
+    pub fn reaches(&self, from_key: i32, destiny_key: i32) -> bool {
         let mut stack: Vec<i32> = vec![from_key];
         let mut visited: HashSet<i32> = HashSet::new();
-    
+
         while let Some(vertice_key) = stack.pop() {
             if vertice_key == destiny_key {
-               // println!("Caminho encontrado de {} para {}", from_key, destiny_key);
                 return true;
             }
 
@@ -253,62 +269,26 @@ impl DiGraph {
         false
     }
 
-    pub fn print(&self) {
-        for (key, vertice) in &self.vertices {
+    pub fn path_between(&self, v: i32, w: i32) -> Option<Vec<Edge>> {
+        let dfs_struct = self.dfs_search(v);
+        let mut path = vec![];
+
+        let mut current = w;
+        let mut found = false;
+        while current != v {
+            let father = dfs_struct.fathers.get(&current);
+            let Some(father) = father else{
+                return None; //não tem caminho entre v e w
+            };
+
+            let vertice = self.get_vertice_arc(*father).unwrap();
             let vertice = vertice.read().unwrap();
-            println!("Vértice: {}", key);
-            for aresta in vertice.edges_borrow() {
-                println!("Aresta: {:?}", aresta);
-            }
+            let edge = vertice.get_edge_to(current).unwrap();
+            path.push(edge.clone());
+            current = *father;
         }
+        Some(path)
     }
-
-    
-
-    pub fn to_dot(&self) -> String {
-        let mut dot = String::from("digraph G {\n");
-        dot.push_str("layout=dot;\n");  // Define o layout como 'dot' (árvore)
-        dot.push_str("node [shape=circle];\n");
-        dot.push_str("edge [dir=forward];\n");  // Direção das arestas
-    
-        for (key, vertice) in &self.vertices {
-            let vertice = vertice.read().unwrap();
-    
-            for aresta in vertice.edges_borrow() {
-                dot.push_str(&format!(
-                    "{} -> {} [label=\"{}\"];\n",  // Define as conexões e inclui o peso
-                    key, aresta.destiny_key(), aresta.weight()
-                ));
-            }
-        }
-    
-        dot.push_str("}");
-        dot
-    }
-    
-    pub fn to_dot_png(&self, file_path: &str) {
-        let dot = self.to_dot();
-        let dot_file = format!("{}.dot", file_path);
-        let png_file = format!("{}.png", file_path);
-    
-        fs::write(&dot_file, dot).expect("Erro ao escrever arquivo DOT");
-    
-        let output = std::process::Command::new("dot")
-            .arg("-Tpng")
-            .arg(&dot_file)
-            .arg("-o")
-            .arg(&png_file)
-            .output()
-            .expect("Erro ao gerar imagem PNG");
-    
-        if !output.status.success() {
-            eprintln!("Erro ao gerar imagem PNG: {}", String::from_utf8_lossy(&output.stderr));
-        }
-    }
-    
-    
-
-
 }
 
 /// Implementação de busca em profundidade
@@ -351,10 +331,7 @@ impl DeepFirstSearch for DiGraph {
                 if !dfs_data.already_explored(aresta.destiny_key()) {
                     // Se ainda não finalizou, é retorno
                     dfs_data.classificate_aresta(&aresta, EdgeClassification::Retorno);
-                } else if dfs_data
-                    .tempo_descoberta
-                    .get(&vertice_key)
-                    .unwrap()
+                } else if dfs_data.tempo_descoberta.get(&vertice_key).unwrap()
                     < dfs_data
                         .tempo_descoberta
                         .get(&aresta.destiny_key())
@@ -381,11 +358,12 @@ impl Kosaraju for DiGraph {
     fn conex_components(&self) -> ConexComponents {
         let t_graph = self.transpose();
         let first_dfs_data = t_graph.dfs_search(1);
-        let mut vertices_queue: Vec<(i32, i32)> = first_dfs_data.tempo_termino.into_iter().collect();
+        let mut vertices_queue: Vec<(i32, i32)> =
+            first_dfs_data.tempo_termino.into_iter().collect();
         vertices_queue.sort_by(|a, b| b.1.cmp(&a.1)); // Ordenar decrescente por tempo de término
 
         let vertices_queue: Vec<i32> = vertices_queue.into_iter().map(|tuple| tuple.0).collect(); // Filtrar para conter apenas os vertices
-                                                                                                 // Agora temos em ordem decrescente o tempo de término, basta realizar a busca e pegar os componentes fortemente conexos
+                                                                                                  // Agora temos em ordem decrescente o tempo de término, basta realizar a busca e pegar os componentes fortemente conexos
         let mut dfs_data = DfsStruct::new(self);
         let mut search_key = dfs_data.get_unexplored_vertice(&vertices_queue);
         while search_key != -1 {
@@ -396,24 +374,27 @@ impl Kosaraju for DiGraph {
     }
 }
 
-
-
 // Gerador aleatório de grafo
 impl DiGraph {
     const MAX_EDGES_MULTIPLIER: u32 = 20;
 
-    const MAX_EDGE_WEIGHT: i32 = 200;
+    const MAX_EDGE_WEIGHT: AtomicI32 = AtomicI32::new(40);
 
-    pub fn from_random(vertices_len: u32, edges_len: Option<u32>, weighted : bool, negative_weight:bool) -> DiGraph {
-        let min_edges = if vertices_len > 0 { vertices_len - 1 } else { 0 };
+    pub fn from_random(
+        vertices_len: u32,
+        edges_len: Option<u32>,
+        weighted: bool,
+        negative_weight: bool,
+    ) -> DiGraph {
+        let min_edges = vertices_len.saturating_sub(1);
         let mut rng = rand::thread_rng();
         let random_edges_len = rng.gen_range(0..vertices_len * Self::MAX_EDGES_MULTIPLIER);
-        let mut edges_len = edges_len.unwrap_or(random_edges_len).max(min_edges); // Compara e retorna o máximo de dois valores
+        let mut edges_len = edges_len.unwrap_or(random_edges_len).max(min_edges);
         let mut edges_added = HashSet::<(i32, i32)>::new();
-        
-        let max_edges = (vertices_len * (vertices_len-1));
-        edges_len = u32::min(edges_len, max_edges);
-        
+        let max_edge_weight = Self::MAX_EDGE_WEIGHT.load(std::sync::atomic::Ordering::Relaxed);
+        let max_edges = vertices_len * (vertices_len - 1);
+        edges_len = edges_len.min(max_edges);
+
         let mut graph = DiGraph::new_sized(vertices_len);
         if vertices_len > 0 {
             graph.add_vertice(0);
@@ -422,17 +403,20 @@ impl DiGraph {
         for i in 1..vertices_len {
             let i_key = i as i32;
             let dest_key: i32 = rng.gen_range(0..i_key);
-            if weighted {
-                if negative_weight{
-                    graph.add_edge_weighted(i_key, dest_key, random::<i32>() % Self::MAX_EDGE_WEIGHT);
-                }else{
-                    let mut weight = random::<i32>() % Self::MAX_EDGE_WEIGHT;
-                    if weight < 0 {weight = weight * -1;}
-                    graph.add_edge_weighted(i_key, dest_key, weight);
+
+            let weight = if weighted {
+                let mut w = random::<i32>() % max_edge_weight;
+                if !negative_weight && w < 0 {
+                    w = -w;
                 }
-                
-            }
-            else {
+                Some(w)
+            } else {
+                None
+            };
+
+            if let Some(w) = weight {
+                graph.add_edge_weighted(i_key, dest_key, w);
+            } else {
                 graph.add_edge(i_key, dest_key);
             }
             edges_added.insert((i_key, dest_key));
@@ -445,37 +429,78 @@ impl DiGraph {
             if origin == destiny || edges_added.contains(&(origin, destiny)) {
                 continue;
             }
-            if weighted {
-                if negative_weight{
-                    graph.add_edge_weighted(origin, destiny, random::<i32>() % Self::MAX_EDGE_WEIGHT);
-                }else{
-                    let mut weight = random::<i32>() % Self::MAX_EDGE_WEIGHT;
-                    if weight < 0 {weight = weight * -1;}
-                    graph.add_edge_weighted(origin, destiny, weight);
+
+            let weight = if weighted {
+                let mut w = random::<i32>() % max_edge_weight;
+                if !negative_weight && w < 0 {
+                    w = -w;
                 }
-            }
-            else {
+                Some(w)
+            } else {
+                None
+            };
+
+            if let Some(w) = weight {
+                graph.add_edge_weighted(origin, destiny, w);
+            } else {
                 graph.add_edge(origin, destiny);
             }
             edges_added.insert((origin, destiny));
             count += 1;
         }
+
         println!(
             "Grafo gerado com {} vértices e {} arestas",
             vertices_len, edges_len
         );
         graph
     }
-}
 
+    /// Sets the edge max value of [`DiGraph`] Random Generator.
+    pub fn set_edge_max(coeficient: i32) {
+        Self::MAX_EDGE_WEIGHT.store(coeficient, std::sync::atomic::Ordering::Relaxed);
+    }
+}
 
 // iterators
 
-impl DiGraph{
-
+impl DiGraph {
     pub fn iter_vertices(&self) -> impl Iterator<Item = &Arc<RwLock<Vertice>>> {
         self.vertices.values()
-    }   
+    }
+}
+impl Clone for DiGraph {
+    fn clone(&self) -> Self {
+        Self {
+            vertices_len: self.vertices_len.clone(),
+            edges_len: self.edges_len.clone(),
+            vertices: self.vertices.clone(),
+        }
+    }
+}
 
+impl DiGraph {
+    /// Encontra um par de vértices (base, antibase) tal que:
+    /// - `base` não tem predecessores.
+    /// - `base` alcança `antibase`.
+    /// - `antibase` não tem sucessores.
+    pub fn find_base_antibase(&self) -> Option<(i32, i32)> {
+        // 1. Encontra a base: um vértice sem predecessores
+        let base = self.get_vertice_key_array()
+            .into_iter()
+            .find(|&v| self.get_predecessor(v).map_or(true, |p| p.is_empty()))?;
+
+        // 2. Encontra a antibase: alcançável pela base e sem sucessores
+        let antibase = self
+            .get_vertice_key_array()
+            .into_iter()
+            .find(|&v| {
+                v != base // Diferente da base
+                    && self.reaches(base, v) // A base alcança esse vértice
+                    && self.get_sucessor(v).map_or(true, |s| s.is_empty()) // Sem sucessores
+            })?;
+
+        Some((base, antibase))
+    }
 }
 

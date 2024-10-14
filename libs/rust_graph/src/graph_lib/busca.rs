@@ -53,8 +53,8 @@ pub struct DfsStruct{
 impl DfsStruct{
     
     pub fn new(g:&DiGraph) -> DfsStruct{
-        let v_len = g.get_vertices_length() as usize;
-        let e_len = g.get_edges_length() as usize;
+        let v_len = g.vertices_length() as usize;
+        let e_len = g.edges_length() as usize;
         DfsStruct{
             tempo_descoberta: HashMap::with_capacity(v_len),
             tempo_termino: HashMap::with_capacity(v_len),
