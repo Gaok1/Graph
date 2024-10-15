@@ -7,11 +7,7 @@ use super::{
 use rand::{random, Rng};
 use scan_fmt::scan_fmt;
 use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    fs,
-    io::ErrorKind,
-    sync::{atomic::AtomicI32, Arc, RwLock},
+    cell::RefCell, collections::{HashMap, HashSet}, fmt::Debug, fs, io::ErrorKind, rc::Rc, sync::{atomic::AtomicI32, Arc, RwLock}
 };
 
 #[derive(Debug)]
@@ -124,12 +120,24 @@ impl DiGraph {
         let mut edges = Vec::with_capacity(len as usize);
         for v in self.vertices.values() {
             let v = v.read().unwrap();
-            let v_edges = v.edges_ref();
+            let v_edges = v.edges_vec_ref();
             for e in v_edges {
                 edges.push(e.clone());
             }
         }
         edges
+    }
+
+    // apply a function to all edges in graph
+    pub fn mut_edges<F>(&mut self, f: F)
+    where F: Fn(&mut Edge) -> () {
+        for v in self.vertices.values() {
+            let mut v = v.write().unwrap();
+            let v_edges = v.edges_vec_mut();
+            for e in v_edges {
+                f(e);
+            }
+        }
     }
 
     /// ## Verifica existência de um vértice no grafo
@@ -182,13 +190,29 @@ impl DiGraph {
         }
     }
 
+    pub fn has_edge(&self, origin_key: i32, destiny_key: i32) -> bool {
+        if let Some(vertice) = self.vertices.get(&origin_key) {
+            let vertice = vertice.read().unwrap();
+            return vertice.has_edge_to(destiny_key);
+        }
+        false
+    }
+
+    pub fn get_edge (&self, origin_key: i32, destiny_key: i32) -> Option<Edge> {
+        if let Some(vertice) = self.vertices.get(&origin_key) {
+            let vertice = vertice.read().unwrap();
+            return vertice.get_edge_to(destiny_key).cloned();
+        }
+        None
+    }
+
     /// Retorna as chaves dos sucessores do vértice
     pub fn get_sucessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
         let vertice = self.get_vertice_arc(vertice_key)?;
         let vertice = vertice.read().unwrap();
         Some(
             vertice
-                .edges_clone()
+                .edges_vec()
                 .iter()
                 .map(|e| e.destiny_key())
                 .collect(),
@@ -199,7 +223,7 @@ impl DiGraph {
     pub fn get_edges(&self, vertice_key: i32) -> Option<Vec<Edge>> {
         let vertice = self.get_vertice_arc(vertice_key)?;
         let vertice = vertice.read().unwrap();
-        Some(vertice.edges_clone())
+        Some(vertice.edges_vec())
     }
 
     /// ### Retorna as chaves dos predecessores do vértice
@@ -207,7 +231,7 @@ impl DiGraph {
         let mut list: Vec<i32> = Vec::new();
         for (vert_key, vertice_ref) in &self.vertices {
             let vertice = vertice_ref.read().unwrap();
-            for aresta in vertice.edges_borrow() {
+            for aresta in vertice.edges_vec_ref() {
                 if aresta.destiny_key() == vertice_key {
                     list.push(aresta.origin_key());
                 }

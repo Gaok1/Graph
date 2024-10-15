@@ -265,7 +265,7 @@ impl GraphPainter {
     }
 
     /// Gera uma imagem PNG a partir da representação DOT do grafo.
-    pub fn to_dot_png(&self, file_path: &str, title : &str) {
+    pub fn to_png(&self, file_path: &str, title : &str) {
         let dot = self.to_dot(title);
         let dot_file = format!("{}.dot", file_path);
         let png_file = format!("{}.png", file_path);
@@ -288,7 +288,6 @@ impl GraphPainter {
                 String::from_utf8_lossy(&output.stderr)
             );
         }
-
         // Deleta o arquivo DOT após gerar a imagem PNG
         fs::remove_file(&dot_file).expect("Erro ao deletar arquivo DOT");
     }
@@ -299,7 +298,7 @@ impl GraphPainter {
         for v in g.iter_vertices() {
             let v = v.read().unwrap();
             graph.add_vertice(v.key(), None);
-            for e in v.edges_borrow() {
+            for e in v.edges_vec() {
                 graph.add_edge(
                     v.key(),
                     e.destiny_key(),

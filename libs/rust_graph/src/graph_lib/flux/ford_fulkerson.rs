@@ -62,7 +62,7 @@ impl EdgeAtt {
 /// `graph` o próprio grafo modificado com as arestas invertidas
 ///
 /// `edgeInverted` mapa de arestas invertidas para true se invertida e false para não invertida
-struct ResidualGraph {
+pub struct ResidualGraph {
     graph: DiGraph,
     edgeInverted: HashMap<(i32, i32), bool>,
 }
@@ -93,7 +93,7 @@ impl ResidualGraph {
         }
     }
 
-    pub fn print(&self) {
+    pub fn to_graph_painter(&self) -> GraphPainter{
         let mut painter = GraphPainter::from_digraph(&self.graph);
 
         for e in self.graph.all_edges() {
@@ -105,7 +105,7 @@ impl ResidualGraph {
                 painter.update_edge_color(v, w, crate::graph_lib::view::Color::Green);
             }
         }
-        painter.to_dot_png("residual_graph", "Residual Graph");
+        painter
     }
 }
 
@@ -156,7 +156,7 @@ impl FluxMap {
         self.max_flux
     }
 
-    pub fn to_png(&self) -> GraphPainter {
+    pub fn to_graph_painter(&self) -> GraphPainter {
         let mut max_val = 0;
         let mut painter = GraphPainter::new();
         let (base, antibase) = self.s_t;
@@ -183,7 +183,7 @@ impl FluxMap {
     }
 }
 #[allow(unused)]
-pub fn max_flux(g: &DiGraph, s: i32, t: i32) -> FluxMap {
+pub fn max_flux(g: &DiGraph, s: i32, t: i32) -> (FluxMap,ResidualGraph) {
     let mut flux_map = FluxMap::from_edges(&g.all_edges(), (s, t));
 
     let mut rede_residual = ResidualGraph::from_graph(g, &flux_map);
@@ -213,20 +213,20 @@ pub fn max_flux(g: &DiGraph, s: i32, t: i32) -> FluxMap {
         increasing_path = IncreasingPath::fromResidualGraph(&rede_residual, s, t);
     }
 
-    for e in g.all_edges() {
-        let (v, w) = (e.origin_key(), e.destiny_key());
-        let att = flux_map.get(&(v, w)).unwrap();
-        if v == s {
-            flux_map.max_flux += (att.get_flux()) as i32;
-        }
+    let vertice = g.get_vertice_arc(s).unwrap();
+    let binding = vertice.read().unwrap();
+    let edges = binding.edges_vec_ref().clone();
+    for e in edges.iter() {
+        let att = flux_map.get(&(s, e.destiny_key())).unwrap();
+        flux_map.max_flux += (att.get_flux()) as i32;   
     }
 
-    flux_map
+    (flux_map,rede_residual)
 }
 
 struct IncreasingPath {
     gargalo: u32,
-    edges: Vec<(Edge)>, // edges of the path
+    edges: Vec<Edge>, // edges of the path
 }
 
 impl IncreasingPath {

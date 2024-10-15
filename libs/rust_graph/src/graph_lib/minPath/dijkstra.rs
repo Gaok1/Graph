@@ -72,7 +72,7 @@ impl Dijkstra {
             let vertice = vertice.unwrap();
 
             let v = vertice.read().unwrap();
-            for e in v.edges_borrow() {
+            for e in v.edges_vec_ref() {
                 let w = e.destiny_key();
                 let v_d = *data.dist.get(&v.key()).unwrap();
                 let w_d = *data.dist.get(&w).unwrap();

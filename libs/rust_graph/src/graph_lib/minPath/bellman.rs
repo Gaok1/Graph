@@ -2,10 +2,6 @@ use std::collections::HashMap;
 
 use crate::{tools::inifinity::Infinity, DiGraph};
 
-
-
-
-
 pub struct Bellman {
     pred: HashMap<i32, i32>,
     pot: HashMap<i32, Infinity>,
@@ -26,10 +22,7 @@ impl Bellman {
     pub fn pot(&self) -> &HashMap<i32, Infinity> {
         &self.pot
     }
-
-   
 }
-
 
 use Infinity::{Infinite, Number};
 #[allow(unused)]
@@ -41,18 +34,18 @@ pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
         data.pot.insert(v.key(), Infinite);
         data.pred.insert(v.key(), -1);
     }
- 
+
     data.pot.insert(start, Number(0));
     for _ in 0..graph.vertices_length() {
         let mut change = false;
         for v in graph.iter_vertices() {
             let v = v.read().unwrap();
-            for e in v.edges_borrow() {
+            for e in v.edges_vec_ref() {
                 let w = e.destiny_key();
                 let v = v.key();
                 let v_d = *data.pot.get(&v).unwrap();
                 let w_d = *data.pot.get(&w).unwrap();
-                
+
                 if w_d > (v_d + Number(e.weight())) {
                     data.pot.insert(w, Number(v_d.unwrap() + e.weight()));
                     data.pred.insert(w, v);
@@ -67,5 +60,3 @@ pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
 
     data
 }
-
-

@@ -7,14 +7,15 @@ use crate::{
 };
 use std::{collections::HashMap, fmt::Alignment, hash::Hash};
 
-pub struct MinPath {
+pub struct MinPath<'a> {
     cost: HashMap<(i32, i32), Infinity>, // maps (v, w) to cost
-    path: HashMap<(i32, i32), Vec<i32>>,
+    g: &'a DiGraph,
 }
+
 use comfy_table::{Cell, CellAlignment, Color, ContentArrangement, Row, Table};
 use Infinity::*;
-impl MinPath {
-    fn new(g: &DiGraph) -> Self {
+impl<'a> MinPath<'a> {
+    fn new(g: &'a DiGraph) -> Self {
         let vertices = g.get_vertice_key_array();
         let mut cost_map: HashMap<(i32, i32), Infinity> = HashMap::new();
 
@@ -31,11 +32,7 @@ impl MinPath {
             let (v, w) = (e.origin_key(), e.destiny_key());
             cost_map.insert((v, w), Infinity::Number(e.weight()));
         }
-        let path = HashMap::new();
-        MinPath {
-            cost: cost_map,
-            path,
-        }
+        MinPath { cost: cost_map, g }
     }
 
     // "Ø";
@@ -44,8 +41,8 @@ impl MinPath {
         self.cost.insert(edge, cost);
     }
 
-    pub fn get_cost(&self, edge: (i32, i32)) -> Infinity {
-        *self.cost.get(&edge).unwrap()
+    pub fn get_cost(&self, edge: (i32, i32)) -> Option<&Infinity> {
+        self.cost.get(&edge)
     }
 
     ///  Finds the minor cust to all vertices to each other
@@ -67,15 +64,16 @@ impl MinPath {
     ///
     ///
     /// ```
-    pub fn from_digraph(g: &DiGraph) -> Self {
+    pub fn from_digraph(g: &'a DiGraph) -> Self {
         let mut cost_map = MinPath::new(g);
         let vertices = g.get_vertice_key_array();
 
         for k in vertices.iter() {
             for v in vertices.iter() {
                 for w in vertices.iter() {
-                    let v_w_cost = cost_map.get_cost((*v, *w));
-                    let v_k_w_cost = cost_map.get_cost((*v, *k)) + cost_map.get_cost((*k, *w));
+                    let v_w_cost = *cost_map.get_cost((*v, *w)).unwrap();
+                    let v_k_w_cost = *cost_map.get_cost((*v, *k)).unwrap()
+                        + *cost_map.get_cost((*k, *w)).unwrap();
                     if v_w_cost > v_k_w_cost {
                         cost_map.set_cost((*v, *w), v_k_w_cost);
                     }
@@ -84,14 +82,14 @@ impl MinPath {
         }
         cost_map
     }
-
-    pub fn to_table(&self, g: &DiGraph) -> Table {
+    ///creates a table from comfy_table crate
+    pub fn to_table(&self) -> Table {
         // Cria uma tabela vazia
         let mut table: Table = Table::new();
         table.set_content_arrangement(ContentArrangement::Dynamic);
 
         // Obtém os vértices do grafo
-        let mut vertices: Vec<i32> = g.get_vertice_key_array(); 
+        let mut vertices: Vec<i32> = self.g.get_vertice_key_array();
         vertices.sort();
 
         // Define o cabeçalho da tabela com os vértices
@@ -106,12 +104,49 @@ impl MinPath {
             let mut row = vec![Cell::new(v.to_string()).fg(Color::Cyan)]; // Primeira coluna como rótulo da linha
             for w in &vertices {
                 let pair = (*v, *w);
-                let cost = self.get_cost(pair);
+                let cost = self.get_cost(pair).unwrap();
                 row.push(Cell::new(format!("{}", cost)));
             }
             table.add_row(Row::from(row));
         }
         table
     }
-    
+
+    pub fn min_paths_from_v(&self, v: i32) -> Vec<Edge> {
+        // Obtém os vértices acessíveis do grafo, excluindo 'v' e vértices inacessíveis.
+        let reachable_vertices: Vec<i32> = self
+            .g
+            .get_vertice_key_array()
+            .iter()
+            .copied()
+            .filter(|&vertice| vertice != v && !self.get_cost((v, vertice)).unwrap().is_infinite())
+            .collect();
+
+        let mut paths = Vec::new();
+        let mut vertices_added = HashMap::new();
+        vertices_added.insert(v, 0); // Adiciona o vértice inicial com custo 0.
+
+        let mut remaining = reachable_vertices; // Rótulo mais claro.
+
+        while let Some(w) = remaining.pop() {
+            let w_cost = self.get_cost((v, w)).unwrap().unwrap();
+            let mut predecessor_found = false;
+
+            for (&pred_v, pred_cost) in &vertices_added {
+                if let Some(edge) = self.g.get_edge(pred_v, w) {
+                    if pred_cost + edge.weight() == w_cost {
+                        paths.push(edge);
+                        vertices_added.insert(w, w_cost);
+                        predecessor_found = true;
+                        break;
+                    }
+                }
+            }
+            if !predecessor_found {
+                remaining.insert(0, w); // Reinsere 'w' no início da lista.
+            }
+        }
+
+        paths
+    }
 }

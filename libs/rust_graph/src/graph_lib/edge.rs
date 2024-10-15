@@ -55,6 +55,10 @@ impl Edge {
         self.weight
     }
 
+    pub fn set_weight(&mut self, weight: i32) {
+        self.weight = weight;
+    }
+
 }
 
 impl PartialOrd for Edge {
