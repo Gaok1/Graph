@@ -8,7 +8,9 @@ use crate::{
 use std::{collections::HashMap, fmt::Alignment, hash::Hash};
 
 pub struct MinPath<'a> {
-    cost: HashMap<(i32, i32), Infinity>, // maps (v, w) to cost
+    cost: HashMap<(i32, i32), Infinity>,   // maps (v, w) to cost
+    predecessor: HashMap<(i32, i32), i32>, //maps a pair of vertices to the predecessor
+    //example, (v,w) -> the predecessor of w in tha path from v to w is i32
     g: &'a DiGraph,
 }
 
@@ -18,11 +20,10 @@ impl<'a> MinPath<'a> {
     fn new(g: &'a DiGraph) -> Self {
         let vertices = g.get_vertice_key_array();
         let mut cost_map: HashMap<(i32, i32), Infinity> = HashMap::new();
-
+        let mut predecessor = HashMap::new();
         for &v in &vertices {
             for &w in &vertices {
                 cost_map.insert((v, w), Infinite);
-
                 if v == w {
                     cost_map.insert((v, w), Number(0));
                 }
@@ -31,8 +32,13 @@ impl<'a> MinPath<'a> {
         for e in g.all_edges() {
             let (v, w) = (e.origin_key(), e.destiny_key());
             cost_map.insert((v, w), Infinity::Number(e.weight()));
+            predecessor.insert((v, w), v);
         }
-        MinPath { cost: cost_map, g }
+        MinPath {
+            cost: cost_map,
+            predecessor: predecessor,
+            g,
+        }
     }
 
     // "Ø";
@@ -43,6 +49,13 @@ impl<'a> MinPath<'a> {
 
     pub fn get_cost(&self, edge: (i32, i32)) -> Option<&Infinity> {
         self.cost.get(&edge)
+    }
+
+    fn set_predecessor(&mut self, edge: (i32, i32), predecessor: i32) {
+        self.predecessor.insert(edge, predecessor);
+    }
+    pub fn get_predecessor(&self, edge: (i32, i32)) -> Option<&i32> {
+        self.predecessor.get(&edge)
     }
 
     ///  Finds the minor cust to all vertices to each other
@@ -68,14 +81,17 @@ impl<'a> MinPath<'a> {
         let mut cost_map = MinPath::new(g);
         let vertices = g.get_vertice_key_array();
 
-        for k in vertices.iter() {
-            for v in vertices.iter() {
-                for w in vertices.iter() {
-                    let v_w_cost = *cost_map.get_cost((*v, *w)).unwrap();
-                    let v_k_w_cost = *cost_map.get_cost((*v, *k)).unwrap()
-                        + *cost_map.get_cost((*k, *w)).unwrap();
+        for &k in vertices.iter() {
+            for &v in vertices.iter() {
+                for &w in vertices.iter() {
+                    let v_w_cost = *cost_map.get_cost((v, w)).unwrap();
+                    let v_k_w_cost =
+                        *cost_map.get_cost((v, k)).unwrap() + *cost_map.get_cost((k, w)).unwrap();
                     if v_w_cost > v_k_w_cost {
-                        cost_map.set_cost((*v, *w), v_k_w_cost);
+                        cost_map.set_cost((v, w), v_k_w_cost);
+                        
+                        let predecessor = *cost_map.get_predecessor((k,w)).unwrap();
+                        cost_map.set_predecessor((v, w),predecessor);        
                     }
                 }
             }
@@ -122,31 +138,13 @@ impl<'a> MinPath<'a> {
             .filter(|&vertice| vertice != v && !self.get_cost((v, vertice)).unwrap().is_infinite())
             .collect();
 
-        let mut paths = Vec::new();
-        let mut vertices_added = HashMap::new();
-        vertices_added.insert(v, 0); // Adiciona o vértice inicial com custo 0.
-
-        let mut remaining = reachable_vertices; // Rótulo mais claro.
-
-        while let Some(w) = remaining.pop() {
-            let w_cost = self.get_cost((v, w)).unwrap().unwrap();
-            let mut predecessor_found = false;
-
-            for (&pred_v, pred_cost) in &vertices_added {
-                if let Some(edge) = self.g.get_edge(pred_v, w) {
-                    if pred_cost + edge.weight() == w_cost {
-                        paths.push(edge);
-                        vertices_added.insert(w, w_cost);
-                        predecessor_found = true;
-                        break;
-                    }
-                }
-            }
-            if !predecessor_found {
-                remaining.insert(0, w); // Reinsere 'w' no início da lista.
-            }
+        let mut paths: Vec<Edge> = Vec::new();
+        for w in reachable_vertices {
+            let pred: Option<&i32> = self.get_predecessor((v, w));
+            let pred = *pred.unwrap();
+            println!("v: {}, w: {} pred : {pred}", v, w);
+            paths.push(Edge::new(pred, w));
         }
-
         paths
     }
 }

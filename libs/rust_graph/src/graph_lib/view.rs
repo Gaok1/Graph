@@ -1,8 +1,8 @@
+use crate::DiGraph;
 use std::collections::HashMap;
 use std::fs;
 use std::process::Command;
 use std::slice::Iter;
-use crate::DiGraph;
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Color {
@@ -145,34 +145,32 @@ impl GraphPainter {
 
     /// Adiciona um vértice ao grafo.
     pub fn add_vertice(&mut self, key: i32, color: Option<Color>) {
-        self.vertices.insert(
-            key,
-            Vertice::new(key, color.unwrap_or_default()),
-        );
+        self.vertices
+            .insert(key, Vertice::new(key, color.unwrap_or_default()));
     }
 
     /// Atualiza o label de um vértice.
-    pub fn update_vertice_label(&mut self, key: i32, label: String) -> Result<(), &'static str> {
+    pub fn update_vertice_label(&mut self, key: i32, label: String) {
         if let Some(vertice) = self.vertices.get_mut(&key) {
             vertice.set_label(label);
-            Ok(())
-        } else {
-            Err("Vértice não encontrado")
         }
     }
 
     /// Atualiza a cor de um vértice.
-    pub fn update_vertice_color(&mut self, key: i32, color: Color) -> Result<(), &'static str> {
+    pub fn update_vertice_color(&mut self, key: i32, color: Color) {
         if let Some(vertice) = self.vertices.get_mut(&key) {
             vertice.set_color(color);
-            Ok(())
-        } else {
-            Err("Vértice não encontrado")
         }
     }
 
     /// Adiciona uma aresta ao grafo.
-    pub fn add_edge(&mut self, origin: i32, destiny: i32, label: Option<String>, color: Option<Color>) {
+    pub fn add_edge(
+        &mut self,
+        origin: i32,
+        destiny: i32,
+        label: Option<String>,
+        color: Option<Color>,
+    ) {
         if self.vertices.get(&origin).is_none() {
             self.add_vertice(origin, None);
         }
@@ -188,22 +186,16 @@ impl GraphPainter {
     }
 
     /// Atualiza a cor de uma aresta.
-    pub fn update_edge_color(&mut self, origin: i32, destiny: i32, color: Color) -> Result<(), &'static str> {
+    pub fn update_edge_color(&mut self, origin: i32, destiny: i32, color: Color) {
         if let Some(edge) = self.edges.get_mut(&(origin, destiny)) {
             edge.set_color(color);
-            Ok(())
-        } else {
-            Err("Aresta não encontrada")
         }
     }
 
     /// Atualiza o label de uma aresta.
-    pub fn update_edge_label(&mut self, origin: i32, destiny: i32, label: String) -> Result<(), &'static str> {
+    pub fn update_edge_label(&mut self, origin: i32, destiny: i32, label: String) {
         if let Some(edge) = self.edges.get_mut(&(origin, destiny)) {
             edge.set_label(label);
-            Ok(())
-        } else {
-            Err("Aresta não encontrada")
         }
     }
 
@@ -215,7 +207,8 @@ impl GraphPainter {
     /// Remove um vértice e todas as arestas associadas a ele.
     pub fn remove_vertice(&mut self, key: i32) -> Result<(), &'static str> {
         if self.vertices.remove(&key).is_some() {
-            self.edges.retain(|&(origin, destiny), _| origin != key && destiny != key);
+            self.edges
+                .retain(|&(origin, destiny), _| origin != key && destiny != key);
             Ok(())
         } else {
             Err("Vértice não encontrado")
@@ -232,14 +225,14 @@ impl GraphPainter {
     }
 
     /// Gera a representação DOT do grafo.
-    pub fn to_dot(&self, title : &str) -> String {
+    pub fn to_dot(&self, title: &str) -> String {
         let mut dot = String::from("digraph G {\n");
         dot.push_str("layout=dot;\n");
         dot.push_str("node [shape=circle];\n");
         dot.push_str("edge [dir=forward];\n");
-        dot.push_str(format!("label=\"{}\";\n", title).as_str());  // Adiciona o título
-        dot.push_str("labelloc=\"t\";\n");  // Posição do título no topo
-        dot.push_str("fontsize=20;\n");     // Define o tamanho da fonte do título
+        dot.push_str(format!("label=\"{}\";\n", title).as_str()); // Adiciona o título
+        dot.push_str("labelloc=\"t\";\n"); // Posição do título no topo
+        dot.push_str("fontsize=20;\n"); // Define o tamanho da fonte do título
         for vertice in self.vertices.values() {
             dot.push_str(&format!(
                 "{} [label=\"{}\", style=filled, fillcolor=\"{}\"];\n",
@@ -265,7 +258,7 @@ impl GraphPainter {
     }
 
     /// Gera uma imagem PNG a partir da representação DOT do grafo.
-    pub fn to_png(&self, file_path: &str, title : &str) {
+    pub fn to_png(&self, file_path: &str, title: &str) {
         let dot = self.to_dot(title);
         let dot_file = format!("{}.dot", file_path);
         let png_file = format!("{}.png", file_path);
@@ -299,14 +292,14 @@ impl GraphPainter {
             let v = v.read().unwrap();
             graph.add_vertice(v.key(), None);
             for e in v.edges_vec() {
-                graph.add_edge(
-                    v.key(),
-                    e.destiny_key(),
-                    Some(e.weight().to_string()),
-                    None,
-                );
+                graph.add_edge(v.key(), e.destiny_key(), Some(e.weight().to_string()), None);
             }
         }
         graph
+    }
+
+    pub fn draw(graph: &DiGraph, file_path: &str, title: &str) {
+        let painter = GraphPainter::from_digraph(graph);
+        painter.to_png(file_path, title);
     }
 }

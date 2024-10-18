@@ -75,6 +75,6 @@ impl Ord for Edge {
 
 impl std::fmt::Debug for Edge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} -> {}", self.origin_key, self.destiny_key)
+        write!(f, "{} -> {} w {} id {}", self.origin_key, self.destiny_key,self.weight, self.id)
     }
 }

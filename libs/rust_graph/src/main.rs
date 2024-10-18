@@ -8,34 +8,59 @@ use edge::Edge;
 use flux::ford_fulkerson;
 use graph::*;
 use graph_lib::*;
-use minPath::floyd_warshall::MinPath;
+use minPath::floyd_warshall::{self, MinPath};
 use text_io::scan;
 use tools::inifinity::Infinity;
 use view::GraphPainter;
 
 #[allow(unused)]
 fn main() {
-    let vertice_len = 10;
-    let edge_len = 14;
+    let sizes = vec![100, 500, 1_000, 2_000];
 
-    let mut graph = DiGraph::from_random(vertice_len, Some(edge_len), true, true);
+    let mut repeticoes: Vec<u32> = vec![];
+
+    let mut graph;
+
+    let mut v_len: u32 = 10;
+
+    let mut s = v_len - 1;
+    let mut t = 0;
+
+    graph = DiGraph::from_random(v_len, Some(18), false, false);
     let mut painter = GraphPainter::from_digraph(&graph);
-    painter.to_png("graph", "graph");
+    painter.to_png("grafo", "grafo");
+    let now = std::time::Instant::now();
+    let mut flux = ford_fulkerson::max_flux(&graph, s as i32, t as i32);
+    let used_edges = flux.0.get_used_edges();
 
-    let min_path = minPath::floyd_warshall::MinPath::from_digraph(&graph);
-    let v: i32;
-    
+    let mut caminhos_disjuntos =
+        DiGraph::from_edges(used_edges.iter().map(|e| e.clone().0).collect());
+    let mut path_num = 0;
 
-    println!("{}", min_path.to_table());
-    println!("Grafo criado em graph.png\nSelecione um vértice para pegar seus menores caminhos :");
-    scan!("{}", v);
-    let paths = min_path.min_paths_from_v(v);
-    for edge in paths{
-        let (v,w) = (edge.origin_key(), edge.destiny_key());
-        painter.update_edge_color(v, w, view::Color::Green);
+    for e in caminhos_disjuntos.all_edges() {
+        painter.update_edge_color(e.origin_key(), e.destiny_key(), view::Color::Green);
     }
-    
-    let title = format!("Menores caminhos de {v}");
-    painter.to_png(title.as_str(), title.as_str());
 
+    painter.to_png("caminho disjuntos graf", "caminho escolhido");
+
+    // loop {
+    //     let mut painter = GraphPainter::from_digraph(&caminhos_disjuntos);
+    //     let path = caminhos_disjuntos.path_between(s as i32, t as i32);
+
+    //     let Some(mut path) = path else {
+    //         break;
+    //     };
+    //     for edge in &path {
+    //         painter.update_edge_color(edge.origin_key(), edge.destiny_key(), view::Color::Green);
+    //     }
+    //     path_num += 1;
+    //     painter.to_png("caminho disjuntos", "caminho escolhido");
+    //     for edge in path {
+    //         caminhos_disjuntos.remove_edge(edge);
+    //     }
+    //     let a: String;
+    //     scan!("{}", a);
+    // }
+
+    println!("Média: {} mls", repeticoes.iter().sum::<u32>() / 3);
 }

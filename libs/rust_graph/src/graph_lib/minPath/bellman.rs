@@ -34,7 +34,7 @@ pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
         data.pot.insert(v.key(), Infinite);
         data.pred.insert(v.key(), -1);
     }
-
+    
     data.pot.insert(start, Number(0));
     for _ in 0..graph.vertices_length() {
         let mut change = false;
@@ -57,6 +57,5 @@ pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
             break;
         }
     }
-
     data
 }
