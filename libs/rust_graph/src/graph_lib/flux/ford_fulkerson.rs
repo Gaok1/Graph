@@ -3,8 +3,8 @@ use std::{collections::HashMap, fmt::format};
 use comfy_table::Color;
 
 use crate::{
-    edge::Edge,
-    view::{self, GraphPainter},
+    graph_lib::edge::Edge,
+    graph_lib::view::{self, GraphPainter},
     DiGraph,
 };
 
@@ -186,11 +186,7 @@ impl FluxMap {
                 painter.update_vertice_label(*v, vertice_label);
                 painter.update_edge_color(*v, *w, view::Color::Green);
             }
-            painter.update_edge_label(
-                *v,
-                *w,
-                format!("{}/{}", att.get_flux(), att.get_capacity()),
-            );
+            painter.update_edge_label(*v, *w, format!("{}/{}", att.get_flux(), att.get_capacity()));
         }
         painter.update_vertice_color(base, view::Color::Green);
         painter.update_vertice_color(antibase, view::Color::Red);
@@ -212,6 +208,38 @@ impl FluxMap {
         }
         edges
     }
+}
+
+pub fn max_flux_multi_s_t(
+    g: &DiGraph,
+    sources: Vec<i32>,
+    terminals: Vec<i32>,
+) -> (FluxMap, ResidualGraph) {
+    let mut graph = g.clone();
+
+    let max_source = graph.unused_v_key_from(graph.vertices_length() as i32);
+    graph.add_vertice(max_source);
+
+    let max_terminal = graph.unused_v_key_from(max_source + 1);
+    graph.add_vertice(max_terminal);
+
+    for &s in sources.iter() {
+        let mut edge_weight = 0;
+        for edge in graph.edges_of(s).iter().flatten() {
+            edge_weight += edge.weight();
+        }
+        graph.add_edge_weighted(max_source, s, edge_weight);
+    }
+
+    for &t in terminals.iter() {
+        let mut edge_weight = 0;
+        for p in graph.predecessor_edges(t).iter().flatten() {
+            edge_weight += p.weight()
+        }
+        graph.add_edge_weighted(t, max_terminal, edge_weight);
+    }
+
+    max_flux(&graph, max_source, max_terminal)
 }
 
 #[allow(unused)]

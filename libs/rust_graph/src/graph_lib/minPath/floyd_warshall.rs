@@ -1,8 +1,8 @@
 use crate::{
-    edge::Edge,
-    graph,
+    graph_lib::edge::Edge,
+    graph_lib::graph,
     tools::inifinity::Infinity,
-    vertice::{self, Vertice},
+    graph_lib::vertice::{self, Vertice},
     DiGraph,
 };
 use std::{collections::HashMap, fmt::Alignment, hash::Hash};

@@ -297,7 +297,15 @@ impl GraphPainter {
         }
         graph
     }
-
+    /// Creates a `GraphPainter` from a `DiGraph` with a title and saves it as a PNG file.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `graph` - The graph to be drawn.
+    /// 
+    /// * `file_path` - The path to save the PNG file.
+    /// 
+    /// * `title` - The title of the graph.
     pub fn draw(graph: &DiGraph, file_path: &str, title: &str) {
         let painter = GraphPainter::from_digraph(graph);
         painter.to_png(file_path, title);

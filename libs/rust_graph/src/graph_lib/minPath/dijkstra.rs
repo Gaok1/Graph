@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    graph, tools::{heap::HeapMin, inifinity::Infinity}, vertice, DiGraph
+    graph_lib::graph, tools::{heap::HeapMin, inifinity::Infinity}, graph_lib::vertice, DiGraph
 };
 
 #[derive(Clone, Copy)]

@@ -1,14 +1,12 @@
 use super::{
-    busca::*,
-    edge::Edge,
-    kosaraju::{ConexComponents, Kosaraju},
-    vertice::{self, Vertice},
+    edge::Edge, search::busca::{DeepFirstSearch, DfsStruct, EdgeClassification}, vertice::{self, Vertice}
 };
 use rand::{random, Rng};
 use scan_fmt::scan_fmt;
+use core::panic;
 use std::{
     cell::RefCell,
-    collections::{HashMap, HashSet},
+    collections::{btree_map::Keys, HashMap, HashSet},
     fmt::Debug,
     fs,
     io::ErrorKind,
@@ -194,12 +192,18 @@ impl DiGraph {
     }
 
     /// Adiciona um vértice ao grafo.
-    pub fn add_vertice(&mut self, vertice_key: i32) {
+    pub fn add_vertice(&mut self, vertice_key: i32) -> bool{
+        if self.vertice_exists(vertice_key) {
+            return false;
+        }
         let vertice = Vertice::new(vertice_key);
         let vertice = Arc::new(RwLock::new(vertice));
         self.vertices.insert(vertice_key, vertice);
         self.vertices_len += 1;
+        true
     }
+
+
 
     /// Adiciona uma aresta ao grafo.
     pub fn add_edge(&mut self, origin_vert: i32, destiny_vert: i32) {
@@ -257,6 +261,15 @@ impl DiGraph {
         None
     }
 
+    pub fn unused_v_key_from(&self, origin:i32 ) -> i32 {
+        let mut key = origin;
+        while self.vertice_exists(key) {
+            key += 1;
+        }
+        key
+
+    }
+
     /// Retorna as chaves dos sucessores de um vértice.
     pub fn get_sucessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
         let vertice = self.get_vertice_arc(vertice_key)?;
@@ -271,20 +284,34 @@ impl DiGraph {
     }
 
     /// Retorna um vetor clonado de todas as arestas de um vértice.
-    pub fn get_edges_of(&self, vertice_key: i32) -> Option<Vec<Edge>> {
+    pub fn edges_of(&self, vertice_key: i32) -> Option<Vec<Edge>> {
         let vertice = self.get_vertice_arc(vertice_key)?;
         let vertice = vertice.read().unwrap();
         Some(vertice.edges_vec())
     }
 
     /// Retorna as chaves dos predecessores de um vértice.
-    pub fn get_predecessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
+    pub fn predecessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
         let mut list: Vec<i32> = Vec::new();
         for (vert_key, vertice_ref) in &self.vertices {
             let vertice = vertice_ref.read().unwrap();
             for aresta in vertice.edges_vec_ref() {
                 if aresta.destiny_key() == vertice_key {
                     list.push(aresta.origin_key());
+                }
+            }
+        }
+        Some(list)
+    }
+
+    /// Retorna arestas predecessoras de um vertice
+    pub fn predecessor_edges(&self, vertice_key: i32) -> Option<Vec<Edge>> {
+        let mut list: Vec<Edge> = Vec::new();
+        for (vert_key, vertice_ref) in &self.vertices {
+            let vertice = vertice_ref.read().unwrap();
+            for edge in vertice.edges_vec_ref() {
+                if edge.destiny_key() == vertice_key {
+                    list.push(edge.clone());
                 }
             }
         }
@@ -309,7 +336,7 @@ impl DiGraph {
         let mut t_graph = DiGraph::new_sized(self.vertices_len);
         let vertices = self.get_vertice_key_array();
         for vertice in vertices {
-            if let Some(edges) = self.get_edges_of(vertice) {
+            if let Some(edges) = self.edges_of(vertice) {
                 for edge in edges {
                     t_graph.add_edge(edge.destiny_key(), edge.origin_key());
                 }
@@ -337,7 +364,7 @@ impl DiGraph {
                 continue;
             }
 
-            if let Some(edges) = self.get_edges_of(vertice_key) {
+            if let Some(edges) = self.edges_of(vertice_key) {
                 for aresta in edges {
                     stack.push(aresta.destiny_key());
                 }
@@ -370,90 +397,8 @@ impl DiGraph {
     }
 }
 
-/// Implementação de busca em profundidade
-impl DeepFirstSearch for DiGraph {
-    fn DeepFirstSearch(&self, search_key: i32, dfs_data: &mut DfsStruct) {
-        let mut stack: Vec<i32> = Vec::new();
-        stack.push(search_key);
 
-        while let Some(&vertice_key) = stack.last() {
-            if !dfs_data.already_visited(vertice_key) {
-                dfs_data.start_exploring(vertice_key);
-            }
 
-            let arestas = self.get_edges_of(vertice_key);
-
-            let Some(mut arestas) = arestas else {
-                dfs_data.finish_exploring(vertice_key);
-                stack.pop();
-                continue;
-            };
-
-            
-            arestas.sort_by(|a, b| a.destiny_key().cmp(&b.destiny_key()));
-
-            let mut descobriu_vertice = false;
-
-            for aresta in arestas.iter() {
-                if dfs_data.is_aresta_marked(aresta.id() as i32) {
-                    continue; // Aresta já classificada
-                }
-                dfs_data.arestas_marked.insert(aresta.id() as i32, true); // Marca a aresta que está sendo explorada
-
-                if !dfs_data.already_visited(aresta.destiny_key()) {
-                    // Não foi descoberto ainda, árvore
-                    dfs_data.fathers.insert(aresta.destiny_key(), vertice_key);
-                    stack.push(aresta.destiny_key()); // Empilha o vértice
-                    dfs_data.classificate_aresta(&aresta, EdgeClassification::Arvore);
-                    descobriu_vertice = true;
-                    dfs_data.add_tree_edge(aresta.origin_key(), aresta.destiny_key());
-                    break;
-                }
-                if !dfs_data.already_explored(aresta.destiny_key()) {
-                    // Se ainda não finalizou, é retorno
-                    dfs_data.classificate_aresta(&aresta, EdgeClassification::Retorno);
-                } else if dfs_data.tempo_descoberta.get(&vertice_key).unwrap()
-                    < dfs_data
-                        .tempo_descoberta
-                        .get(&aresta.destiny_key())
-                        .unwrap()
-                {
-                    // Se já finalizou a busca, mas ele é mais novo que o vertice_key, é avanço
-                    dfs_data.classificate_aresta(&aresta, EdgeClassification::Avanco);
-                } else {
-                    // Se já finalizou a busca, mas ele é mais velho que o vertice_key, é cruzamento
-                    dfs_data.classificate_aresta(&aresta, EdgeClassification::Cruzamento);
-                }
-            }
-
-            if !descobriu_vertice {
-                dfs_data.finish_exploring(vertice_key);
-                stack.pop();
-            }
-        }
-    }
-}
-
-// Kosaraju
-impl Kosaraju for DiGraph {
-    fn conex_components(&self) -> ConexComponents {
-        let t_graph = self.transpose();
-        let first_dfs_data = t_graph.dfs_search(1);
-        let mut vertices_queue: Vec<(i32, i32)> =
-            first_dfs_data.tempo_termino.into_iter().collect();
-        vertices_queue.sort_by(|a, b| b.1.cmp(&a.1)); // Ordenar decrescente por tempo de término
-
-        let vertices_queue: Vec<i32> = vertices_queue.into_iter().map(|tuple| tuple.0).collect(); // Filtrar para conter apenas os vertices
-                                                                                                  // Agora temos em ordem decrescente o tempo de término, basta realizar a busca e pegar os componentes fortemente conexos
-        let mut dfs_data = DfsStruct::new(self);
-        let mut search_key = dfs_data.get_unexplored_vertice(&vertices_queue);
-        while search_key != -1 {
-            self.DeepFirstSearch(search_key, &mut dfs_data);
-            search_key = dfs_data.get_unexplored_vertice(&vertices_queue);
-        }
-        ConexComponents::from_dfsData(&mut dfs_data)
-    }
-}
 
 // Gerador aleatório de grafo
 impl DiGraph {
@@ -604,7 +549,7 @@ impl DiGraph {
         let base = self
             .get_vertice_key_array()
             .into_iter()
-            .find(|&v| self.get_predecessor(v).map_or(true, |p| p.is_empty()))?;
+            .find(|&v| self.predecessor(v).map_or(true, |p| p.is_empty()))?;
 
         // 2. Encontra a antibase: alcançável pela base e sem sucessores
         let antibase = self
