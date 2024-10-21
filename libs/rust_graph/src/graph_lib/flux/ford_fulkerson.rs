@@ -228,7 +228,7 @@ pub fn max_flux_multi_s_t(
         for edge in graph.edges_of(s).iter().flatten() {
             edge_weight += edge.weight();
         }
-        graph.add_edge_weighted(max_source, s, edge_weight);
+        graph.add_edge(Edge::new_weighted(s, max_source, edge_weight));
     }
 
     for &t in terminals.iter() {
@@ -236,7 +236,7 @@ pub fn max_flux_multi_s_t(
         for p in graph.predecessor_edges(t).iter().flatten() {
             edge_weight += p.weight()
         }
-        graph.add_edge_weighted(t, max_terminal, edge_weight);
+        graph.add_edge(Edge::new_weighted(t, max_terminal, edge_weight));
     }
 
     max_flux(&graph, max_source, max_terminal)

@@ -23,8 +23,8 @@ impl Bellman {
         &self.pot
     }
 }
+use Infinity::*;
 
-use Infinity::{Infinite, Number};
 #[allow(unused)]
 pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
     let mut data = Bellman::new();

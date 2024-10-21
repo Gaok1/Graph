@@ -59,6 +59,10 @@ impl Edge {
         self.weight = weight;
     }
 
+    pub fn v_w(&self) -> (i32,i32) {
+        (self.origin_key, self.destiny_key)
+    }
+
 }
 
 impl PartialOrd for Edge {

@@ -23,7 +23,7 @@ impl ConexComponents{
         }
     }
 
-    pub fn from_dfsData(dfs_data : &mut DfsStruct) -> ConexComponents{
+    fn from_dfsData(dfs_data : &mut DfsStruct) -> ConexComponents{
         let mut len = 0;
         let mut components = ConexComponents::new();
 
@@ -34,7 +34,6 @@ impl ConexComponents{
         }
         components.len = len;
         components
-
     }
 
     pub fn clone_components(&self)->Vec<Rc<RefCell<DiGraph>>> {
@@ -69,3 +68,4 @@ impl Kosaraju for DiGraph {
         ConexComponents::from_dfsData(&mut dfs_data)
     }
 }
+

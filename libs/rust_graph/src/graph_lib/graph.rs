@@ -1,21 +1,18 @@
 use super::{
-    edge::Edge, search::busca::{DeepFirstSearch, DfsStruct, EdgeClassification}, vertice::{self, Vertice}
+    edge::Edge,
+    search::busca::{DeepFirstSearch, DfsStruct, EdgeClassification},
+    vertice::{self, Vertice},
 };
+use core::panic;
 use rand::{random, Rng};
 use scan_fmt::scan_fmt;
-use core::panic;
 use std::{
-    cell::RefCell,
-    collections::{btree_map::Keys, HashMap, HashSet},
+    collections::{HashMap, HashSet},
     fmt::Debug,
     fs,
     io::ErrorKind,
     rc::Rc,
-    sync::{
-        atomic::AtomicI32,
-        Arc,
-        RwLock,
-    },
+    sync::{atomic::AtomicI32, Arc, RwLock},
 };
 
 #[derive(Debug)]
@@ -99,7 +96,7 @@ impl DiGraph {
                     return None;
                 }
             };
-            graph.add_edge(orig, dest);
+            graph.add_edge(Edge::new(orig, dest));
         }
         Some(graph)
     }
@@ -109,11 +106,11 @@ impl DiGraph {
         let mut graph = DiGraph::new();
 
         edge_array.iter().for_each(|edge| {
-            let (v,w) = (edge.origin_key(), edge.destiny_key());
-            if !graph.vertice_exists(v){
+            let (v, w) = (edge.origin_key(), edge.destiny_key());
+            if !graph.vertice_exists(v) {
                 graph.add_vertice(v);
-            }  
-            if !graph.vertice_exists(w){
+            }
+            if !graph.vertice_exists(w) {
                 graph.add_vertice(w);
             }
             let vertice = graph.get_vertice_arc(v).unwrap();
@@ -125,8 +122,8 @@ impl DiGraph {
     }
 
     /// Retorna a quantidade de vértices no grafo.
-    pub fn vertices_length(&self) -> u32 {
-        self.vertices_len
+    pub fn vertices_length(&self) -> usize {
+        self.vertices.len()
     }
 
     /// Retorna a quantidade de arestas no grafo.
@@ -146,6 +143,16 @@ impl DiGraph {
         self.vertices.get(&vertice_key).cloned()
     }
 
+    pub fn get_vertice_arc_read(&self, vertice_key: i32) -> std::sync::RwLockReadGuard<'_, Vertice> {
+        let v = self.vertices.get(&vertice_key).unwrap();
+        v.read().unwrap()
+    }
+
+    pub fn get_vertice_arc_write(&self, vertice_key: i32) -> std::sync::RwLockWriteGuard<'_, Vertice> {
+        let v = self.vertices.get(&vertice_key).unwrap();
+        v.write().unwrap()
+    }
+
     /// Retorna todas as arestas do grafo como um vetor.
     pub fn all_edges(&self) -> Vec<Edge> {
         let len: usize = self.edges_length();
@@ -160,7 +167,7 @@ impl DiGraph {
         edges
     }
 
-    pub fn remove_edge(&mut self, e:Edge){
+    pub fn remove_edge(&mut self, e: Edge) {
         let mut vertice = self.get_vertice_arc(e.origin_key()).unwrap();
         let mut vertice = vertice.write().unwrap();
         vertice.remove_edge(e);
@@ -192,7 +199,7 @@ impl DiGraph {
     }
 
     /// Adiciona um vértice ao grafo.
-    pub fn add_vertice(&mut self, vertice_key: i32) -> bool{
+    pub fn add_vertice(&mut self, vertice_key: i32) -> bool {
         if self.vertice_exists(vertice_key) {
             return false;
         }
@@ -203,42 +210,26 @@ impl DiGraph {
         true
     }
 
-
-
     /// Adiciona uma aresta ao grafo.
-    pub fn add_edge(&mut self, origin_vert: i32, destiny_vert: i32) {
-        if !self.vertice_exists(origin_vert) {
-            self.add_vertice(origin_vert);
+    pub fn add_edge(&mut self, edge: Edge) {
+        let (v, w) = edge.v_w();
+        if !self.vertice_exists(v) {
+            self.add_vertice(v);
         }
-        if !self.vertice_exists(destiny_vert) {
-            self.add_vertice(destiny_vert);
-        }
-
-        // Obtém o Arc<RwLock<Vertice>> referente ao vértice de origem
-        if let Some(vertice_origem) = self.vertices.get(&origin_vert) {
-            let mut vertice_origem = vertice_origem.write().unwrap();
-            let edge = Edge::new(vertice_origem.key(), destiny_vert);
-            vertice_origem.add_edge(edge);
-            self.edges_len += 1;
-        }
-    }
-
-    /// Adiciona uma aresta ponderada ao grafo.
-    pub fn add_edge_weighted(&mut self, origin_vert: i32, destiny_vert: i32, weight: i32) {
-        if !self.vertice_exists(origin_vert) {
-            self.add_vertice(origin_vert);
-        }
-        if !self.vertice_exists(destiny_vert) {
-            self.add_vertice(destiny_vert);
+        if !self.vertice_exists(w) {
+            self.add_vertice(w);
         }
 
         // Obtém o Arc<RwLock<Vertice>> referente ao vértice de origem
-        if let Some(vertice_origem) = self.vertices.get(&origin_vert) {
-            let mut vertice_origem = vertice_origem.write().unwrap();
-            let edge = Edge::new_weighted(vertice_origem.key(), destiny_vert, weight);
-            vertice_origem.add_edge(edge);
-            self.edges_len += 1;
-        }
+        let vertice_origem = self.vertices.get(&v).unwrap();
+        let mut vertice_origem = vertice_origem.write().unwrap();
+        vertice_origem.add_edge(edge.clone());
+
+        let mut vertice_destino = self.vertices.get(&w).unwrap();
+        let mut vertice_destino = vertice_destino.write().unwrap();
+        vertice_destino.add_back_edge(edge);
+
+        self.edges_len += 1;
     }
 
     /// Verifica se existe pelo menos uma aresta entre dois vértices.
@@ -261,13 +252,12 @@ impl DiGraph {
         None
     }
 
-    pub fn unused_v_key_from(&self, origin:i32 ) -> i32 {
+    pub fn unused_v_key_from(&self, origin: i32) -> i32 {
         let mut key = origin;
         while self.vertice_exists(key) {
             key += 1;
         }
         key
-
     }
 
     /// Retorna as chaves dos sucessores de um vértice.
@@ -278,7 +268,13 @@ impl DiGraph {
             vertice
                 .edges_hashmap()
                 .keys()
-                .filter_map(|&(orig, dest)| if orig == vertice_key { Some(dest) } else { None })
+                .filter_map(|&(orig, dest)| {
+                    if orig == vertice_key {
+                        Some(dest)
+                    } else {
+                        None
+                    }
+                })
                 .collect(),
         )
     }
@@ -338,7 +334,7 @@ impl DiGraph {
         for vertice in vertices {
             if let Some(edges) = self.edges_of(vertice) {
                 for edge in edges {
-                    t_graph.add_edge(edge.destiny_key(), edge.origin_key());
+                    t_graph.add_edge(Edge::new(edge.destiny_key(), edge.origin_key()));
                 }
             }
         }
@@ -397,9 +393,6 @@ impl DiGraph {
     }
 }
 
-
-
-
 // Gerador aleatório de grafo
 impl DiGraph {
     const MAX_EDGES_MULTIPLIER: u32 = 20;
@@ -449,9 +442,9 @@ impl DiGraph {
             };
 
             if let Some(w) = weight {
-                graph.add_edge_weighted(i_key, dest_key, w);
+                graph.add_edge(Edge::new_weighted(i_key, dest_key, w));
             } else {
-                graph.add_edge(i_key, dest_key);
+                graph.add_edge(Edge::new(i_key, dest_key));
             }
             edges_added.insert((i_key, dest_key));
         }
@@ -475,9 +468,9 @@ impl DiGraph {
             };
 
             if let Some(w) = weight {
-                graph.add_edge_weighted(origin, destiny, w);
+                graph.add_edge(Edge::new_weighted(origin, destiny, w));
             } else {
-                graph.add_edge(origin, destiny);
+                graph.add_edge(Edge::new(origin, destiny));
             }
             edges_added.insert((origin, destiny));
             count += 1;
@@ -497,28 +490,27 @@ impl DiGraph {
 
     pub fn new_grid(height: u32, width: u32) -> DiGraph {
         let mut digraph = DiGraph::new_sized((height * width));
-    
+
         for row in 0..height {
             for col in 0..width {
                 let v = row * width + col;
-    
+
                 // Conectar com o vizinho da direita
                 if col + 1 < width {
                     let right_neighbor = v + 1;
-                    digraph.add_edge(v as i32, right_neighbor as i32);
+                    digraph.add_edge(Edge::new(v as i32, right_neighbor as i32));
                 }
-    
+
                 // Conectar com o vizinho de baixo
                 if row + 1 < height {
                     let bottom_neighbor = v + width;
-                    digraph.add_edge(v as i32, bottom_neighbor as i32);
+                    digraph.add_edge(Edge::new(v as i32, bottom_neighbor as i32));
                 }
             }
         }
-    
+
         digraph
     }
-    
 }
 
 // Iteradores
@@ -552,14 +544,11 @@ impl DiGraph {
             .find(|&v| self.predecessor(v).map_or(true, |p| p.is_empty()))?;
 
         // 2. Encontra a antibase: alcançável pela base e sem sucessores
-        let antibase = self
-            .get_vertice_key_array()
-            .into_iter()
-            .find(|&v| {
-                v != base // Diferente da base
+        let antibase = self.get_vertice_key_array().into_iter().find(|&v| {
+            v != base // Diferente da base
                     && self.reaches(base, v) // A base alcança esse vértice
                     && self.get_sucessor(v).map_or(true, |s| s.is_empty()) // Sem sucessores
-            })?;
+        })?;
         Some((base, antibase))
     }
 }

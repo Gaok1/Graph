@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use super::edge::Edge;
+use std::collections::HashMap;
 
 /// # Vertice
 /// Estrutura destinada a representar vértices em um grafo.
@@ -9,6 +9,7 @@ use super::edge::Edge;
 pub struct Vertice {
     key: i32,
     edges: HashMap<(i32, i32), Vec<Edge>>, // Arestas armazenadas como HashMap com vetores para permitir arestas paralelas
+    back_edges: HashMap<(i32, i32), Vec<Edge>>,
 }
 
 impl Vertice {
@@ -27,6 +28,7 @@ impl Vertice {
         Vertice {
             key: vertice_key,
             edges: HashMap::new(),
+            back_edges: HashMap::new(),
         }
     }
 
@@ -117,7 +119,10 @@ impl Vertice {
     /// let all_edges_mut = vertice.edges_vec_mut();
     /// ```
     pub fn edges_vec_mut(&mut self) -> Vec<&mut Edge> {
-        self.edges.values_mut().flat_map(|vec| vec.iter_mut()).collect()
+        self.edges
+            .values_mut()
+            .flat_map(|vec| vec.iter_mut())
+            .collect()
     }
 
     /// Adiciona uma aresta ao `HashMap`. Permite múltiplas arestas para o mesmo destino.
@@ -138,6 +143,14 @@ impl Vertice {
         self.edges.entry(key).or_insert_with(Vec::new).push(edge);
     }
 
+    pub fn add_back_edge(&mut self, edge: Edge) {
+        let key = (self.key, edge.origin_key());
+        self.back_edges
+            .entry(key)
+            .or_insert_with(Vec::new)
+            .push(edge);
+    }
+
     /// Verifica se há pelo menos uma aresta entre este vértice e o destino dado.
     ///
     /// # Argumentos
@@ -156,20 +169,62 @@ impl Vertice {
         self.edges.contains_key(&(self.key, destiny_key))
     }
 
-
     pub fn remove_edge(&mut self, e: Edge) {
         let (v, w) = (e.origin_key(), e.destiny_key());
-    
+
         if let Some((_, edges)) = self.edges.remove_entry(&(v, w)) {
-            let filtered_edges: Vec<_> = edges.into_iter()
+            let filtered_edges: Vec<_> = edges
+                .into_iter()
                 .filter(|edge| edge.weight() != e.weight())
                 .collect();
-    
+
             if !filtered_edges.is_empty() {
                 self.edges.insert((v, w), filtered_edges);
             }
         }
     }
-    
+    /// Retorna todas as arestas que saem deste vértice.
+    /// 
+    /// tuple.0 contém as arestas que saem do vértice
+    /// 
+    /// tuple.1 contém as arestas que chegam no vértice
+    pub fn get_all_edges_tuple(&self) -> (Vec<Edge>, Vec<Edge>) {
+        let mut edges = Vec::with_capacity(self.edges.len());
+        let mut back_edges = Vec::with_capacity(self.back_edges.len());
+        for (_, vec) in self.edges.iter() {
+            for e in vec {
+                edges.push(e.clone());
+            }
+        }
+        for (_, vec) in self.back_edges.iter() {
+            for e in vec {
+                back_edges.push(e.clone());
+            }
+        }
+        (edges, back_edges)
+    }
 
+    pub fn back_edges_hashmap(&self) -> Vec<Edge> {
+        self.back_edges
+            .values()
+            .flat_map(|vec| vec.clone())
+            .collect()
+    }
+
+    pub fn get_all_edges(&self, destiny_key: i32) -> Vec<Edge> {
+        let mut edges = Vec::new();
+        let mut back_edges = Vec::new();
+        if let Some(vec) = self.edges.get(&(self.key, destiny_key)) {
+            for e in vec {
+                edges.push(e.clone());
+            }
+        }
+        if let Some(vec) = self.back_edges.get(&(self.key, destiny_key)) {
+            for e in vec {
+                back_edges.push(e.clone());
+            }
+        }
+        edges.append(&mut back_edges);
+        edges
+    }
 }

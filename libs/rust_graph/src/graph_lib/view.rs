@@ -16,6 +16,13 @@ pub enum Color {
     White,
     Grey,
     Black,
+    Orange,
+    Purple,
+    Pink,
+    Brown,
+    Lime,
+    Indigo,
+    Violet,
 }
 
 impl Color {
@@ -31,20 +38,32 @@ impl Color {
             Color::White => String::from("white"),
             Color::Grey => String::from("grey"),
             Color::Black => String::from("black"),
+            Color::Orange => String::from("orange"),
+            Color::Purple => String::from("purple"),
+            Color::Pink => String::from("pink"),
+            Color::Brown => String::from("brown"),
+            Color::Lime => String::from("lime"),
+            Color::Indigo => String::from("indigo"),
+            Color::Violet => String::from("violet"),
         }
     }
 
     pub fn iterator() -> Iter<'static, Color> {
-        static COLORS: [Color; 9] = [
+        static COLORS: [Color; 14] = [
             Color::Red,
             Color::Green,
             Color::Blue,
             Color::Cyan,
             Color::Magenta,
             Color::Yellow,
-            Color::White,
             Color::Grey,
-            Color::Black,
+            Color::Orange,
+            Color::Purple,
+            Color::Pink,
+            Color::Brown,
+            Color::Lime,
+            Color::Indigo,
+            Color::Violet,
         ];
         COLORS.iter()
     }
@@ -298,13 +317,13 @@ impl GraphPainter {
         graph
     }
     /// Creates a `GraphPainter` from a `DiGraph` with a title and saves it as a PNG file.
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `graph` - The graph to be drawn.
-    /// 
+    ///
     /// * `file_path` - The path to save the PNG file.
-    /// 
+    ///
     /// * `title` - The title of the graph.
     pub fn draw(graph: &DiGraph, file_path: &str, title: &str) {
         let painter = GraphPainter::from_digraph(graph);
