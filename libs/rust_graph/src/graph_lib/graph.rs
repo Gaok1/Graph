@@ -27,7 +27,7 @@ use std::{
 pub struct DiGraph {
     vertices_len: u32,
     edges_len: usize,
-    vertices: HashMap<i32, Arc<RwLock<Vertice>>>, // thread safety
+    vertices: HashMap<i32, Vertice>, // thread safety
 }
 
 #[allow(unused)]
@@ -101,7 +101,7 @@ impl DiGraph {
         Some(graph)
     }
 
-    /// Cria um grafo direcionado a partir de um vetor de arestas.
+    /// Cria um grafo direcionado a partir de um vetor de arestas ponderadas ou não.
     pub fn from_edges(edge_array: Vec<Edge>) -> DiGraph {
         let mut graph = DiGraph::new();
 
@@ -113,8 +113,7 @@ impl DiGraph {
             if !graph.vertice_exists(w) {
                 graph.add_vertice(w);
             }
-            let vertice = graph.get_vertice_arc(v).unwrap();
-            let mut vertice = vertice.write().unwrap();
+            let vertice = graph.get_vertice_arc_mut(v).unwrap();
             vertice.add_edge(edge.clone());
             graph.edges_len += 1;
         });
@@ -139,18 +138,12 @@ impl DiGraph {
     }
 
     /// Retorna a referência do Arc<RwLock<Vertice>>, se existir.
-    pub fn get_vertice_arc(&self, vertice_key: i32) -> Option<Arc<RwLock<Vertice>>> {
-        self.vertices.get(&vertice_key).cloned()
+    pub fn get_vertice_arc(&self, vertice_key: i32) -> Option<&Vertice> {
+        self.vertices.get(&vertice_key)
     }
 
-    pub fn get_vertice_arc_read(&self, vertice_key: i32) -> std::sync::RwLockReadGuard<'_, Vertice> {
-        let v = self.vertices.get(&vertice_key).unwrap();
-        v.read().unwrap()
-    }
-
-    pub fn get_vertice_arc_write(&self, vertice_key: i32) -> std::sync::RwLockWriteGuard<'_, Vertice> {
-        let v = self.vertices.get(&vertice_key).unwrap();
-        v.write().unwrap()
+    pub fn get_vertice_arc_mut(&mut self, vertice_key: i32) -> Option<&mut Vertice> {
+        self.vertices.get_mut(&vertice_key)
     }
 
     /// Retorna todas as arestas do grafo como um vetor.
@@ -158,7 +151,6 @@ impl DiGraph {
         let len: usize = self.edges_length();
         let mut edges = Vec::with_capacity(len as usize);
         for v in self.vertices.values() {
-            let v = v.read().unwrap();
             let v_edges = v.edges_vec_ref();
             for e in v_edges {
                 edges.push(e.clone());
@@ -168,8 +160,7 @@ impl DiGraph {
     }
 
     pub fn remove_edge(&mut self, e: Edge) {
-        let mut vertice = self.get_vertice_arc(e.origin_key()).unwrap();
-        let mut vertice = vertice.write().unwrap();
+        let mut vertice = self.get_vertice_arc_mut(e.origin_key()).unwrap();
         vertice.remove_edge(e);
     }
 
@@ -180,9 +171,8 @@ impl DiGraph {
     where
         F: Fn(&mut Edge) -> (),
     {
-        for v in self.vertices.values() {
-            let mut vertice = v.write().unwrap();
-            let mut_edges = vertice.edges_hashmap_mut();
+        for v in self.vertices.values_mut() {
+            let mut_edges = v.edges_hashmap_mut();
             for edge_vec in mut_edges.values_mut() {
                 for edge in edge_vec.iter_mut() {
                     f(edge);
@@ -204,7 +194,6 @@ impl DiGraph {
             return false;
         }
         let vertice = Vertice::new(vertice_key);
-        let vertice = Arc::new(RwLock::new(vertice));
         self.vertices.insert(vertice_key, vertice);
         self.vertices_len += 1;
         true
@@ -221,12 +210,10 @@ impl DiGraph {
         }
 
         // Obtém o Arc<RwLock<Vertice>> referente ao vértice de origem
-        let vertice_origem = self.vertices.get(&v).unwrap();
-        let mut vertice_origem = vertice_origem.write().unwrap();
+        let vertice_origem = self.get_vertice_arc_mut(v).unwrap();
         vertice_origem.add_edge(edge.clone());
 
-        let mut vertice_destino = self.vertices.get(&w).unwrap();
-        let mut vertice_destino = vertice_destino.write().unwrap();
+        let mut vertice_destino = self.get_vertice_arc_mut(w).unwrap();
         vertice_destino.add_back_edge(edge);
 
         self.edges_len += 1;
@@ -235,7 +222,6 @@ impl DiGraph {
     /// Verifica se existe pelo menos uma aresta entre dois vértices.
     pub fn has_edge(&self, origin_key: i32, destiny_key: i32) -> bool {
         if let Some(vertice) = self.vertices.get(&origin_key) {
-            let vertice = vertice.read().unwrap();
             return vertice.has_edge_to(destiny_key);
         }
         false
@@ -246,7 +232,6 @@ impl DiGraph {
     /// Retorna `Some(Vec<Edge>)` se houver arestas, ou `None` caso contrário.
     pub fn get_edges(&self, origin_key: i32, destiny_key: i32) -> Option<Vec<Edge>> {
         if let Some(vertice) = self.vertices.get(&origin_key) {
-            let vertice = vertice.read().unwrap();
             return vertice.get_edges_to(destiny_key).cloned();
         }
         None
@@ -263,7 +248,6 @@ impl DiGraph {
     /// Retorna as chaves dos sucessores de um vértice.
     pub fn get_sucessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
         let vertice = self.get_vertice_arc(vertice_key)?;
-        let vertice = vertice.read().unwrap();
         Some(
             vertice
                 .edges_hashmap()
@@ -282,7 +266,6 @@ impl DiGraph {
     /// Retorna um vetor clonado de todas as arestas de um vértice.
     pub fn edges_of(&self, vertice_key: i32) -> Option<Vec<Edge>> {
         let vertice = self.get_vertice_arc(vertice_key)?;
-        let vertice = vertice.read().unwrap();
         Some(vertice.edges_vec())
     }
 
@@ -290,8 +273,7 @@ impl DiGraph {
     pub fn predecessor(&self, vertice_key: i32) -> Option<Vec<i32>> {
         let mut list: Vec<i32> = Vec::new();
         for (vert_key, vertice_ref) in &self.vertices {
-            let vertice = vertice_ref.read().unwrap();
-            for aresta in vertice.edges_vec_ref() {
+            for aresta in vertice_ref.edges_vec_ref() {
                 if aresta.destiny_key() == vertice_key {
                     list.push(aresta.origin_key());
                 }
@@ -304,8 +286,7 @@ impl DiGraph {
     pub fn predecessor_edges(&self, vertice_key: i32) -> Option<Vec<Edge>> {
         let mut list: Vec<Edge> = Vec::new();
         for (vert_key, vertice_ref) in &self.vertices {
-            let vertice = vertice_ref.read().unwrap();
-            for edge in vertice.edges_vec_ref() {
+            for edge in vertice_ref.edges_vec_ref() {
                 if edge.destiny_key() == vertice_key {
                     list.push(edge.clone());
                 }
@@ -378,17 +359,18 @@ impl DiGraph {
         while current != v {
             let father = dfs_struct.fathers.get(&current)?;
             let vertice = self.get_vertice_arc(*father).unwrap();
-            let vertice = vertice.read().unwrap();
+
             // Coletar todas as arestas para `current` e encontrar uma que parta de `father`
             let edges_to_current = vertice.get_edges_to(current).unwrap();
-            if let Some(edge) = edges_to_current.iter().find(|e| e.destiny_key() == current) {
-                path.push(edge.clone());
-                current = *father;
-            } else {
-                return None; // Caminho inconsistente
-            }
+
+            let edge = edges_to_current
+                .iter()
+                .find(|e| e.destiny_key() == current)?;
+
+            path.push(edge.clone());
+            current = *father;
         }
-        path.reverse(); // Opcional: para que o caminho comece de `v` e vá até `w`
+        path.reverse();
         Some(path)
     }
 }
@@ -403,9 +385,13 @@ impl DiGraph {
     /// Cria um grafo direcionado aleatório.
     ///
     /// `vertices_len`: número de vértices
+    ///
     /// `edges_len`: número de arestas (opcional)
+    ///
     /// `weighted`: se as arestas devem ter pesos
+    ///
     /// `negative_weight`: se os pesos podem ser negativos
+    ///
     pub fn from_random(
         vertices_len: u32,
         edges_len: Option<u32>,
@@ -516,7 +502,7 @@ impl DiGraph {
 // Iteradores
 impl DiGraph {
     /// Retorna um iterador sobre os vértices do grafo.
-    pub fn iter_vertices(&self) -> impl Iterator<Item = &Arc<RwLock<Vertice>>> {
+    pub fn iter_vertices(&self) -> impl Iterator<Item = &Vertice> {
         self.vertices.values()
     }
 }
@@ -550,5 +536,39 @@ impl DiGraph {
                     && self.get_sucessor(v).map_or(true, |s| s.is_empty()) // Sem sucessores
         })?;
         Some((base, antibase))
+    }
+}
+
+// to csv
+impl DiGraph{
+    pub fn to_csv(&self)  {
+        self.vertices_to_csv("vertices.csv");
+        self.edges_to_csv("edges.csv");
+    }
+
+    pub fn vertices_to_csv(&self, file_path: &str) {
+        let mut csv = String::new();
+        csv.push_str("id,label\n");
+        for vertice in self.iter_vertices() {
+            let vertice_key = vertice.key();
+            let vertice_str = format!("{},{}\n", vertice_key,vertice_key);
+            csv.push_str(&vertice_str);
+        }
+        fs::write(file_path, csv).expect("Erro ao escrever arquivo");
+    }
+
+    pub fn edges_to_csv(&self, file_path: &str) {
+        let mut csv = String::new();
+        csv.push_str("source,target,weight\n");
+        for vertice in self.iter_vertices() {
+
+            let vertice_key = vertice.key();
+            for edge in vertice.edges_vec_ref() {
+                let (v,w) = edge.v_w();
+                let edge_str = format!("{},{},{}\n", v, w, edge.weight());
+                csv.push_str(&edge_str);
+            }
+        }
+        fs::write(file_path, csv).expect("Erro ao escrever arquivo");
     }
 }

@@ -308,7 +308,6 @@ impl GraphPainter {
     pub fn from_digraph(g: &DiGraph) -> Self {
         let mut graph = Self::new();
         for v in g.iter_vertices() {
-            let v = v.read().unwrap();
             graph.add_vertice(v.key(), None);
             for e in v.edges_vec() {
                 graph.add_edge(v.key(), e.destiny_key(), Some(e.weight().to_string()), None);

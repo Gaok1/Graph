@@ -30,7 +30,7 @@ pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
     let mut data = Bellman::new();
 
     for v in graph.iter_vertices() {
-        let v = v.read().unwrap();
+     
         data.pot.insert(v.key(), Infinite);
         data.pred.insert(v.key(), -1);
     }
@@ -39,7 +39,7 @@ pub fn find_shortest_path(graph: &DiGraph, start: i32) -> Bellman {
     for _ in 0..graph.vertices_length() {
         let mut change = false;
         for v in graph.iter_vertices() {
-            let v = v.read().unwrap();
+         
             for e in v.edges_vec_ref() {
                 let w = e.destiny_key();
                 let v = v.key();

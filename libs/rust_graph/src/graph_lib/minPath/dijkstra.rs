@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use crate::{
-    graph_lib::graph, tools::{heap::HeapMin, inifinity::Infinity}, graph_lib::vertice, DiGraph
+    graph_lib::graph,
+    graph_lib::vertice,
+    tools::{heap::HeapMin, inifinity::Infinity},
+    DiGraph,
 };
 
 #[derive(Clone, Copy)]
@@ -55,29 +58,33 @@ impl Dijkstra {
         queue.insert((VerticeDist(v_key, Infinity::new(0))));
 
         for v in g.iter_vertices() {
-            let v = v.read().unwrap();
             if v.key() != v_key {
                 data.dist.insert(v.key(), Infinite);
                 data.pred.insert(v.key(), -1);
             }
         }
 
-
         while !queue.empty() {
             let v = queue.pop().unwrap().0;
             let vertice = g.get_vertice_arc(v);
-            if vertice.is_none(){
+            if vertice.is_none() {
                 panic!("Vertice does not exist in graph {v}");
             }
-            let vertice = vertice.unwrap();
+            let v = vertice.unwrap();
 
-            let v = vertice.read().unwrap();
             for e in v.edges_vec_ref() {
                 let w = e.destiny_key();
                 let v_d = *data.dist.get(&v.key()).unwrap();
                 let w_d = *data.dist.get(&w).unwrap();
                 if w_d > (v_d + Number(e.weight())) {
-                    println!("Relaxando d[{}] = {} com d[{}] = {} + w(v,w) = {}",w, w_d, v.key(),v_d, e.weight());
+                    println!(
+                        "Relaxando d[{}] = {} com d[{}] = {} + w(v,w) = {}",
+                        w,
+                        w_d,
+                        v.key(),
+                        v_d,
+                        e.weight()
+                    );
                     data.dist.insert(w, Number(v_d.unwrap() + e.weight()));
                     data.pred.insert(w, v.key());
                     queue.insert(VerticeDist(w, Number(v_d.unwrap() + e.weight())));

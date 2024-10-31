@@ -5,9 +5,9 @@ use crate::{
     graph_lib::vertice::{self, Vertice},
     DiGraph,
 };
-use std::{collections::HashMap, fmt::Alignment, hash::Hash};
+use std::{collections::HashMap, fmt::Alignment, hash::Hash, rc::Rc, sync::Arc};
 
-pub struct MinPath<'a> {
+pub struct MinPathTable<'a> {
     cost: HashMap<(i32, i32), Infinity>,   // maps (v, w) to cost
     predecessor: HashMap<(i32, i32), i32>, //maps a pair of vertices to the predecessor
     //example, (v,w) -> the predecessor of w in tha path from v to w is i32
@@ -16,7 +16,7 @@ pub struct MinPath<'a> {
 
 use comfy_table::{Cell, CellAlignment, Color, ContentArrangement, Row, Table};
 use Infinity::*;
-impl<'a> MinPath<'a> {
+impl<'a> MinPathTable<'a> {
     fn new(g: &'a DiGraph) -> Self {
         let vertices = g.get_vertice_key_array();
         let mut cost_map: HashMap<(i32, i32), Infinity> = HashMap::new();
@@ -29,19 +29,17 @@ impl<'a> MinPath<'a> {
                 }
             }
         }
-        for e in g.all_edges() {
-            let (v, w) = (e.origin_key(), e.destiny_key());
+        for e in g.all_edges() { //colocar os custos das arestas correspondentes
+            let (v, w) = e.v_w();
             cost_map.insert((v, w), Infinity::Number(e.weight()));
             predecessor.insert((v, w), v);
         }
-        MinPath {
+        MinPathTable {
             cost: cost_map,
             predecessor: predecessor,
             g,
         }
     }
-
-    // "Ø";
 
     fn set_cost(&mut self, edge: (i32, i32), cost: Infinity) {
         self.cost.insert(edge, cost);
@@ -78,15 +76,18 @@ impl<'a> MinPath<'a> {
     ///
     /// ```
     pub fn from_digraph(g: &'a DiGraph) -> Self {
-        let mut cost_map = MinPath::new(g);
-        let vertices = g.get_vertice_key_array();
-
+        let mut cost_map = MinPathTable::new(g);
+        let mut vertices = g.get_vertice_key_array();
+        vertices.sort();
+        println!("{}",cost_map.to_table());
         for &k in vertices.iter() {
             for &v in vertices.iter() {
                 for &w in vertices.iter() {
                     let v_w_cost = *cost_map.get_cost((v, w)).unwrap();
+
                     let v_k_w_cost =
                         *cost_map.get_cost((v, k)).unwrap() + *cost_map.get_cost((k, w)).unwrap();
+                        
                     if v_w_cost > v_k_w_cost {
                         cost_map.set_cost((v, w), v_k_w_cost);
                         
@@ -95,6 +96,7 @@ impl<'a> MinPath<'a> {
                     }
                 }
             }
+            println!("Finished K{k}\n{}", cost_map.to_table());
         }
         cost_map
     }
@@ -140,11 +142,12 @@ impl<'a> MinPath<'a> {
 
         let mut paths: Vec<Edge> = Vec::new();
         for w in reachable_vertices {
-            let pred: Option<&i32> = self.get_predecessor((v, w));
+            let pred = self.get_predecessor((v, w));
             let pred = *pred.unwrap();
             println!("v: {}, w: {} pred : {pred}", v, w);
             paths.push(Edge::new(pred, w));
         }
         paths
     }
+
 }

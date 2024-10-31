@@ -5,7 +5,7 @@ use std::collections::HashMap;
 /// Estrutura destinada a representar vértices em um grafo.
 ///
 /// Contém campos como `key` e `edges`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq,Clone)]
 pub struct Vertice {
     key: i32,
     edges: HashMap<(i32, i32), Vec<Edge>>, // Arestas armazenadas como HashMap com vetores para permitir arestas paralelas
@@ -87,7 +87,7 @@ impl Vertice {
     }
 
     /// Retorna todas as arestas como um vetor (`Vec<Edge>`).
-    ///
+    /// apenas as arestas sucessoras
     /// # Exemplo
     ///
     /// ```

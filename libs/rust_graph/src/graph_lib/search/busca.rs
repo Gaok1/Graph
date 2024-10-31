@@ -62,10 +62,7 @@ impl DfsStruct {
 
     pub fn start_exploring(&mut self, vertice_key: i32) {
         self.tempo_descoberta.insert(vertice_key, self.clock);
-        println!(
-            "Descobrindo vértice {} no tempo {}",
-            vertice_key, self.clock
-        );
+
         self.clock += 1;
     }
 
@@ -73,10 +70,7 @@ impl DfsStruct {
     /// `vertice_k` - chave do vértice a ser finalizado
     pub fn finish_exploring(&mut self, vertice_k: i32) {
         self.tempo_termino.insert(vertice_k, self.clock);
-        println!(
-            "Finalizando exploração do vértice {} no tempo {}",
-            vertice_k, self.clock
-        );
+
         self.clock += 1;
     }
 
@@ -120,12 +114,7 @@ impl DfsStruct {
 
     pub fn classificate_aresta(&mut self, aresta: &Edge, class: EdgeClassification) {
         self.class_arestas.insert(aresta.clone(), class.clone());
-        println!(
-            "Classificando aresta {} -> {} como {:?}",
-            aresta.origin_key(),
-            aresta.destiny_key(),
-            class
-        );
+
         if class.is_arvore() {
             let (v, w) = aresta.v_w();
             self.add_tree_edge(v, w);
@@ -151,16 +140,13 @@ impl DfsStruct {
             let mut tree_mut = tree.try_borrow_mut().unwrap();
             if tree_mut.vertice_exists(origin_vert) {
                 tree_mut.add_edge(Edge::new(origin_vert, destiny_vert));
-                println!(
-                    "Adicionando aresta {} -> {} na árvore existente",
-                    origin_vert, destiny_vert
-                );
+
                 return;
             }
         }
 
         // Se o vértice de origem não foi encontrado em nenhuma árvore, crie uma nova árvore
-        println!("Adicionando nova árvore com raiz {}", origin_vert);
+
         let mut new_tree = DiGraph::new();
         new_tree.add_edge(Edge::new(origin_vert, destiny_vert));
         trees.push(Rc::new(RefCell::new(new_tree)));
@@ -171,7 +157,6 @@ impl DfsStruct {
         let mut new_tree = DiGraph::new();
         new_tree.add_vertice(root);
         trees.push(Rc::new(RefCell::new(new_tree)));
-        println!("Adicionando raiz {}", root);
     }
 }
 
@@ -182,51 +167,35 @@ pub trait DeepFirstSearch {
 /// Implementação de busca em profundidade
 impl DeepFirstSearch for DiGraph {
     fn DeepFirstSearch(&self, search_key: i32, dfs_data: &mut DfsStruct) {
-        println!("Iniciando DFS a partir do vértice {}", search_key);
         let mut stack: Vec<i32> = Vec::new();
         stack.push(search_key);
         dfs_data.add_root(search_key);
 
         while let Some(&vertice_key) = stack.last() {
-            println!("Topo da pilha: {}", vertice_key);
-
             if !dfs_data.already_visited(vertice_key) {
                 dfs_data.start_exploring(vertice_key);
             } else {
-                println!("Vértice {} já foi visitado", vertice_key);
             }
 
             let arestas = self.edges_of(vertice_key);
 
             let Some(mut arestas) = arestas else {
-                println!(
-                    "Vértice {} não possui arestas restantes. Finalizando exploração.",
-                    vertice_key
-                );
                 dfs_data.finish_exploring(vertice_key);
                 stack.pop();
                 continue;
             };
 
             arestas.sort_by(|a, b| a.destiny_key().cmp(&b.destiny_key()));
-            println!("Processando arestas do vértice {}", vertice_key);
 
             let mut descobriu_vertice = false;
 
             for aresta in arestas.iter() {
                 if dfs_data.is_aresta_marked(aresta.id() as i32) {
-                    println!("Aresta {} já foi marcada. Pulando.", aresta.id());
                     continue; // Aresta já classificada
                 }
                 dfs_data.arestas_marked.insert(aresta.id() as i32, true); // Marca a aresta que está sendo explorada
-                println!("Marcando aresta {} como explorada", aresta.id());
 
                 if !dfs_data.already_visited(aresta.destiny_key()) {
-                    println!(
-                        "Aresta de árvore detectada: {} -> {}",
-                        vertice_key,
-                        aresta.destiny_key()
-                    );
                     // Não foi descoberto ainda, árvore
                     dfs_data.fathers.insert(aresta.destiny_key(), vertice_key);
                     stack.push(aresta.destiny_key()); // Empilha o vértice
@@ -235,11 +204,6 @@ impl DeepFirstSearch for DiGraph {
                     break;
                 }
                 if !dfs_data.already_explored(aresta.destiny_key()) {
-                    println!(
-                        "Aresta de retorno detectada: {} -> {}",
-                        vertice_key,
-                        aresta.destiny_key()
-                    );
                     // Se ainda não finalizou, é retorno
                     dfs_data.classificate_aresta(&aresta, EdgeClassification::Retorno);
                 } else {
@@ -250,19 +214,9 @@ impl DeepFirstSearch for DiGraph {
                         .get(&aresta.destiny_key())
                         .unwrap_or(&-1);
                     if vertice_descoberta < destino_descoberta {
-                        println!(
-                            "Aresta de avanço detectada: {} -> {}",
-                            vertice_key,
-                            aresta.destiny_key()
-                        );
                         // Se já finalizou a busca, mas ele é mais novo que o vertice_key, é avanço
                         dfs_data.classificate_aresta(&aresta, EdgeClassification::Avanco);
                     } else {
-                        println!(
-                            "Aresta de cruzamento detectada: {} -> {}",
-                            vertice_key,
-                            aresta.destiny_key()
-                        );
                         // Se já finalizou a busca, mas ele é mais velho que o vertice_key, é cruzamento
                         dfs_data.classificate_aresta(&aresta, EdgeClassification::Cruzamento);
                     }
@@ -270,14 +224,9 @@ impl DeepFirstSearch for DiGraph {
             }
 
             if !descobriu_vertice {
-                println!(
-                    "Todas as arestas do vértice {} foram processadas. Finalizando exploração.",
-                    vertice_key
-                );
                 dfs_data.finish_exploring(vertice_key);
                 stack.pop();
             }
         }
-        println!("Árvores resultantes:");
     }
 }
