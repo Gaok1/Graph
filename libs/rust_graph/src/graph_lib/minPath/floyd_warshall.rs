@@ -79,7 +79,6 @@ impl<'a> MinPathTable<'a> {
         let mut cost_map = MinPathTable::new(g);
         let mut vertices = g.get_vertice_key_array();
         vertices.sort();
-        println!("{}",cost_map.to_table());
         for &k in vertices.iter() {
             for &v in vertices.iter() {
                 for &w in vertices.iter() {
@@ -96,7 +95,6 @@ impl<'a> MinPathTable<'a> {
                     }
                 }
             }
-            println!("Finished K{k}\n{}", cost_map.to_table());
         }
         cost_map
     }
