@@ -54,10 +54,9 @@ impl DiGraph {
     ///
     /// O arquivo deve estar no formato:
     /// ```
-    /// <número_de_vértices> <número_de_arestas>
-    /// <origem1> <destino1>
-    /// <origem2> <destino2>
-    /// ...
+    /// let v = 2;
+    /// println!("v: {v}");
+    /// 
     /// ```
     pub fn from_file(file_path: &str) -> Option<DiGraph> {
         let file = fs::read_to_string(file_path);

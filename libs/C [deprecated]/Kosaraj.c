@@ -189,3 +189,10 @@ DFS_SearchStruct *BuscaProfundidade(int start, Graph *g)
     return searchData; // Retorna os dados da busca
 }
 
+
+int main() {
+    Graph *g = graph_from_random(100000, 200000,100000 ); // Cria um grafo a partir de um arquivo
+    g->explore_all_edges_deep(g, 1);
+    while(1);
+}
+
